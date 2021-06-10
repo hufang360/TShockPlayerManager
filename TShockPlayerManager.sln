@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31105.61
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TerrariaPlayerManage", "TerrariaPlayerManage.csproj", "{EA7030C6-7B15-469A-91B4-378106E7B15B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TShockPlayerManager", "TShockPlayerManager.csproj", "{EA7030C6-7B15-469A-91B4-378106E7B15B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
