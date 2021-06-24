@@ -7,19 +7,20 @@ using System.Reflection;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
+using Terraria.Localization;
 
 namespace Plugin
 {
     [ApiVersion(2, 1)]
     public class Plugin : TerrariaPlugin
     {
+
+        #region Plugin Info
         public override string Author => "hufang360";
-
         public override string Description => "角色管理";
-
         public override string Name => "PlayerManager";
-
         public override Version Version => Assembly.GetExecutingAssembly().GetName().Version;
+        #endregion
 
         public static readonly string save_dir = Path.Combine(TShock.SavePath, "PlayerManager");
         public static readonly string config_path = Path.Combine(save_dir, "config.json");
@@ -35,6 +36,7 @@ namespace Plugin
         }
 
 
+        #region Initialize/Dispose
         public override void Initialize()
         {
             if (!Directory.Exists(save_dir))
@@ -42,6 +44,9 @@ namespace Plugin
             LoadConfig();
 
             Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm") { HelpText = "角色管理" });
+            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager.lockhp" }, LockHP, "lockhp") { HelpText = "锁血" });
+            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager.startinventory" }, StartInventory, "startinventory", "si") { HelpText = "初始背包管理" });
+
             GetDataHandlers.PlayerSpawn += OnRespawn;
             ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
             ServerApi.Hooks.ServerJoin.Register(this, OnServerJoin, 421);
@@ -57,6 +62,9 @@ namespace Plugin
             }
             base.Dispose(disposing);
         }
+        #endregion
+
+
         private void LoadConfig()
         {
             startingInventory = TShock.ServerSideCharacterConfig.Settings.StartingInventory;
@@ -82,29 +90,16 @@ namespace Plugin
                 // 帮助
                 case "help":
                     args.Player.SendInfoMessage("/pm export [玩家名], 导出所有玩家的在线存档，可指定只导出某一个玩家");
-                    args.Player.SendInfoMessage("/pm maxhp <玩家名> <生命上线>, 修改单个玩家的生命上线");
+                    args.Player.SendInfoMessage("/pm hp <玩家名> <生命值>, 修改单个玩家的生命值");
+                    args.Player.SendInfoMessage("/pm maxhp <玩家名> <生命上限>, 修改单个玩家的生命上限");
                     args.Player.SendInfoMessage("/pm look <玩家名>, 查看某一个玩家的背包信息");
-                    args.Player.SendInfoMessage("/pm lockhp, 血量锁定 功能");
-                    args.Player.SendInfoMessage("/pm randitem, 附加随机物品 功能");
+                    args.Player.SendInfoMessage("/lockhp help, 血量锁定 功能");
+                    args.Player.SendInfoMessage("/si help, 初始背包和新手礼包 功能");
                     return;
 
                 // 查看玩家背包
                 case "look":
                     LookPlayer(args);
-                    break;
-
-                case "maxhp":
-                    break;
-
-                //  生命锁定
-                case "lockhp":
-                    LockHP(args);
-                    break;
-
-                //  随机物品
-                case "randitem":
-                case "randomitem":
-                    RandomItem(args);
                     break;
 
                 // 导出
@@ -113,48 +108,196 @@ namespace Plugin
                     ExportPlayer.Export(args);
                     #pragma warning restore 4014
                     break;
-            }
 
+                case "hp":
+                    ModifyHP(args);
+                    break;
+                case "maxhp":
+                    ModifyMaxHP(args);
+                    break;
+                case "mana":
+                    ModifyMana(args);
+                    break;
+                case "maxMana":
+                    ModifyMaxMana(args);
+                    break;
+            }
         }
 
+        #region modify hp mana
+        private void ModifyHP(CommandArgs args)
+        {
+            if (args.Parameters.Count < 3)
+            {
+                args.Player.SendInfoMessage("语法错误，/pm hp <玩家名> <生命值>");
+                return;
+            }
+            string pname = args.Parameters[1];
+            string pvalue = args.Parameters[2];
+            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
+            if (players.Count == 0)
+            {
+                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            }
+            else if (players.Count > 1)
+            {
+                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            }
+            else
+            {
+                var plr = players[0];
+                int hp = 0;
+                if ( int.TryParse(pvalue, out hp) ){
+                    if(hp>0){
+                        plr.TPlayer.statLife = hp;
+                        NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                        args.Player.SendSuccessMessage($"{plr.Name} 的生命值已修改为 {hp}");
+                    } else {
+                        args.Player.SendSuccessMessage($"输入的生命值无效, {pvalue}");
+                    }
+                } else {
+                    args.Player.SendSuccessMessage($"输入的生命值无效, {pvalue}");
+                }
+            }
+        }
 
-        # region lockhp
+        private void ModifyMaxHP(CommandArgs args)
+        {
+            if (args.Parameters.Count < 3)
+            {
+                args.Player.SendInfoMessage("语法错误，/pm maxhp <玩家名> <生命上限>");
+                return;
+            }
+            string pname = args.Parameters[1];
+            string pvalue = args.Parameters[2];
+            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
+            if (players.Count == 0)
+            {
+                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            }
+            else if (players.Count > 1)
+            {
+                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            }
+            else
+            {
+                var plr = players[0];
+                int maxhp = 0;
+                if ( int.TryParse(pvalue, out maxhp)){
+                    if (maxhp<100){
+                        args.Player.SendErrorMessage("最大生命值，不能低于100!");
+                    } else {
+                        plr.TPlayer.statLifeMax = maxhp;
+                        NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                        args.Player.SendSuccessMessage($"{plr.Name} 的最大生命值已修改为 {maxhp}");
+                    }
+                } else {
+                    args.Player.SendSuccessMessage($"输入的最大生命值无效, {pvalue}");
+                }
+            }
+        }
+        private void ModifyMana(CommandArgs args)
+        {
+            if (args.Parameters.Count < 3)
+            {
+                args.Player.SendInfoMessage("语法错误，/pm mana <玩家名> <魔力值>");
+                return;
+            }
+            string pname = args.Parameters[1];
+            string pvalue = args.Parameters[2];
+            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
+            if (players.Count == 0)
+            {
+                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            }
+            else if (players.Count > 1)
+            {
+                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            }
+            else
+            {
+                var plr = players[0];
+                int mana = 0;
+                if ( int.TryParse(pvalue, out mana) ){
+                    if(mana>0){
+                        plr.TPlayer.statMana = mana;
+                        NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                        args.Player.SendSuccessMessage($"{plr.Name} 的魔力值已修改为 {mana}");
+                    } else {
+                        args.Player.SendSuccessMessage($"输入的魔力值无效, {pvalue}");
+                    }
+                } else {
+                    args.Player.SendSuccessMessage($"输入的魔力值无效, {pvalue}");
+                }
+            }
+        }
+
+        private void ModifyMaxMana(CommandArgs args)
+        {
+            if (args.Parameters.Count < 3)
+            {
+                args.Player.SendInfoMessage("语法错误，/pm maxhp <玩家名> <生命上限>");
+                return;
+            }
+            string pname = args.Parameters[1];
+            string pvalue = args.Parameters[2];
+            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
+            if (players.Count == 0)
+            {
+                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            }
+            else if (players.Count > 1)
+            {
+                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            }
+            else
+            {
+                var plr = players[0];
+                int mana = 0;
+                if ( int.TryParse(pvalue, out mana)){
+                    if (mana<20){
+                        args.Player.SendErrorMessage("最大魔力值不能低于20!");
+                    } else {
+                        plr.TPlayer.statManaMax = mana;
+                        NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                        args.Player.SendSuccessMessage($"{plr.Name} 的最大魔力值已修改为 {mana}");
+                    }
+                } else {
+                    args.Player.SendSuccessMessage($"输入的最大魔力值无效, {pvalue}");
+                }
+            }
+        }
+        #endregion
+
+
+        # region lock hp
         private void LockHP(CommandArgs args)
         {
-            if (args.Parameters.Count == 1)
+            if (args.Parameters.Count == 0)
             {
-                args.Player.SendInfoMessage("输入 /pm lockhp help 显示帮助信息");
+                args.Player.SendInfoMessage("语法错误，输入 /lockhp help 显示帮助信息");
                 return;
             }
 
-            var choice = args.Parameters[1].ToLowerInvariant();
+            var choice = args.Parameters[0].ToLowerInvariant();
             switch (choice)
             {
-                default:
-                    int num;
-                    if (int.TryParse(choice, out num))
-                    {
-                        _config.LockHPValue = num;
-                        args.Player.SendSuccessMessage("锁血值 已改成 {0}", num);
-                    }
-                    else
-                    {
-                        args.Player.SendErrorMessage("语法不正确！");
-                    }
-                    break;
-
                 // 帮助
                 case "help":
-                    args.Player.SendInfoMessage("/pm lockhp info, 显示功能信息");
-                    args.Player.SendInfoMessage("/pm lockhp true, 开启 血量锁定");
-                    args.Player.SendInfoMessage("/pm lockhp false, 关闭 血量锁定");
-                    args.Player.SendInfoMessage("/pm lockhp {血量}, 设置 锁血值");
+                    args.Player.SendInfoMessage("/lockhp info, 显示功能信息");
+                    args.Player.SendInfoMessage("/lockhp true, 开启 血量锁定");
+                    args.Player.SendInfoMessage("/lockhp false, 关闭 血量锁定");
+                    args.Player.SendInfoMessage("/lockhp <血量>, 设置 锁血值");
                     break;
 
-                case "false":
-                    _config.LockHPEnable = false;
-                    args.Player.SendInfoMessage("血量锁定 已关闭");
-                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
+                case "info":
+                    args.Player.SendInfoMessage("-----[血量锁定]-----");
+                    if (_config.LockHPEnable)
+                        args.Player.SendInfoMessage("功能: 已打开");
+                    else
+                        args.Player.SendInfoMessage("功能: 已关闭");
+                    args.Player.SendInfoMessage("锁血值：{0}", _config.LockHPValue);
+                    args.Player.SendInfoMessage("频率：{0}", _config.LockHPSecond);
                     break;
 
                 case "true":
@@ -163,25 +306,145 @@ namespace Plugin
                     File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
                     break;
 
-                case "info":
-                    args.Player.SendInfoMessage("-----[血量锁定]-----");
-                    if (_config.LockHPEnable)
+                case "false":
+                    _config.LockHPEnable = false;
+                    args.Player.SendInfoMessage("血量锁定 已关闭");
+                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
+                    break;
+
+                default:
+                    int num;
+                    if (int.TryParse(choice, out num))
                     {
-                        args.Player.SendInfoMessage("功能: 已打开");
+                        if ( num<1){
+                            args.Player.SendErrorMessage("锁血值 不能低于1");
+                        } else{
+                            _config.LockHPValue = num;
+                            args.Player.SendSuccessMessage("锁血值 已改成 {0}", num);
+                            File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
+                        }
                     }
                     else
                     {
-                        args.Player.SendInfoMessage("功能: 已关闭");
+                        args.Player.SendErrorMessage("语法错误");
                     }
-                    args.Player.SendInfoMessage("锁血值：{0}", _config.LockHPValue);
                     break;
             }
 
         }
+        private void OnRespawn(object o, GetDataHandlers.SpawnEventArgs args)
+        {
+            if (!_config.LockHPEnable)
+                return;
+
+            var plr = args.Player;
+            if( plr.TPlayer.statLife > _config.LockHPValue && !plr.Dead ){
+                plr.TPlayer.statLife = _config.LockHPValue;
+                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+            }
+        }
+        private void OnUpdate(EventArgs args)
+        {
+            if (!_config.LockHPEnable)
+                return;
+
+            if (update_count < update_total)
+            {
+                update_count++;
+                return;
+            }
+            else
+            {
+                update_count = 0;
+            }
+
+            foreach (TSPlayer plr in TShock.Players)
+            {
+                if (plr != null && !plr.Dead)
+                {
+                    if (plr.TPlayer.statLife > _config.LockHPValue){
+                        plr.TPlayer.statLife = _config.LockHPValue;
+                        NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                    }
+                }
+            }
+        }
         # endregion
 
 
-        #  region random item
+        #  region 初始背包管理
+        private void StartInventory(CommandArgs args)
+        {
+            if (args.Parameters.Count ==0)
+            {
+                args.Player.SendInfoMessage("语法错误，输入 /si help 显示帮助信息");
+                return;
+            }
+
+            var choice = args.Parameters[0].ToLowerInvariant();
+            switch (choice)
+            {
+                default:
+                    args.Player.SendErrorMessage("语法错误！");
+                    break;
+
+                // 帮助
+                case "help":
+                    args.Player.SendInfoMessage("/si info, 显示信息");
+                    // args.Player.SendInfoMessage("/si add <物品id/名称> [堆叠数量] [词缀] , 添加物品，堆叠数量和词缀信息可不提供");
+                    // args.Player.SendInfoMessage("/si del <物品id/名称>, 移除物品");
+                    args.Player.SendInfoMessage("/si gif true, 开启 新手礼包功能");
+                    args.Player.SendInfoMessage("/si gif false, 关闭 新手礼包功能");
+                    break;
+
+                case "info":
+                    args.Player.SendInfoMessage("-----[新手礼包]-----");
+                    if (_config.RandItemEnable)
+                        args.Player.SendInfoMessage("功能：已打开");
+                    else
+                        args.Player.SendInfoMessage("功能：已关闭");
+                    break;
+
+                case "gift":
+                    Gift(args);
+                    break;
+            }
+        }
+
+        // 新手礼包
+        private void Gift(CommandArgs args)
+        {
+            if (args.Parameters.Count < 2)
+            {
+                args.Player.SendInfoMessage("语法错误，输入 /si help 显示帮助信息");
+                return;
+            }
+
+            var choice = args.Parameters[1].ToLowerInvariant();
+            switch (choice)
+            {
+                case "true":
+                    _config.RandItemEnable = true;
+                    RandomInventory();
+                    args.Player.SendInfoMessage("新手礼包 已打开");
+                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
+                    break;
+
+                case "false":
+                    _config.RandItemEnable = false;
+                    TShock.ServerSideCharacterConfig.Settings.StartingInventory = startingInventory;
+                    args.Player.SendInfoMessage("新手礼包 已关闭");
+                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
+                    break;
+
+                case "add":
+                    break;
+
+                case "del":
+                    break;
+            }
+        }
+
         private void RandomInventory()
         {
             Random rd = new Random();
@@ -227,7 +490,7 @@ namespace Plugin
             inve2 = _config.RandItem10;
             if (inve2.Count > 0)
                 inve1.Add(inve2[rd.Next(inve2.Count)]);
-                
+
 
             List<NetItem> inve = new List<NetItem>();
             startingInventory.ForEach(i => inve.Add(i));
@@ -235,97 +498,8 @@ namespace Plugin
             inve1.ForEach( i => inve.Add(new NetItem(i.netID, i.stack, i.prefix)) );
 
             TShock.ServerSideCharacterConfig.Settings.StartingInventory = inve;
-            TShock.Log.ConsoleInfo($"随机背包，额外增加 {inve1.Count} 格物品");
+            TShock.Log.ConsoleInfo($"新手礼包 包含 {inve1.Count} 个物品");
         }
-
-
-        private void RandomItem(CommandArgs args)
-        {
-            if (args.Parameters.Count == 1)
-            {
-                args.Player.SendInfoMessage("输入 /pm randitem help 显示帮助信息");
-                return;
-            }
-
-            var choice = args.Parameters[1].ToLowerInvariant();
-            switch (choice)
-            {
-                default:
-                    args.Player.SendErrorMessage("语法不正确！");
-                    break;
-
-                // 帮助
-                case "help":
-                    args.Player.SendInfoMessage("/pm randitem info, 显示 功能信息");
-                    args.Player.SendInfoMessage("/pm randitem true, 开启 附加随机物品功能");
-                    args.Player.SendInfoMessage("/pm randitem false, 关闭 附加随机物品功能");
-                    break;
-
-                case "false":
-                    _config.RandItemEnable = false;
-                    TShock.ServerSideCharacterConfig.Settings.StartingInventory = startingInventory;
-                    args.Player.SendInfoMessage("附加 随机物品功能 已关闭");
-                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
-                    break;
-
-                case "true":
-                    _config.RandItemEnable = true;
-                    RandomInventory();
-                    args.Player.SendInfoMessage("附加 随机物品功能 已打开");
-                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
-                    break;
-
-                case "info":
-                    if (_config.RandItemEnable)
-                    {
-                        args.Player.SendInfoMessage("功能处于 打开状态");
-                    }
-                    else
-                    {
-                        args.Player.SendInfoMessage("功能处于 关闭状态");
-                    }
-                    break;
-            }
-
-        }
-        # endregion
-
-
-        # region event
-        private void OnUpdate(EventArgs args)
-        {
-            if (!_config.LockHPEnable)
-            {
-                return;
-            }
-            if (update_count < update_total)
-            {
-                update_count++;
-                return;
-            }
-            else
-            {
-                update_count = 0;
-            }
-
-            foreach (TSPlayer plr in TShock.Players)
-            {
-                if (plr != null)
-                {
-                    if (plr.TPlayer.dead)
-                    {
-                        continue;
-                    }
-
-                    plr.TPlayer.statLife = _config.LockHPValue;
-                    plr.TPlayer.statLifeMax = _config.LockHPValue;
-                    // https://github.com/Brycey92/PlayerInfo/blob/terraria-1.4/PlayerInfo/PlayerInfo.cs#L117
-                    // PlayerHp
-                    NetMessage.SendData(16, -1, -1, null, plr.Index, 0f, 0f, 0f, 0); // Sends Health Packet
-                }
-            }
-        }
-
         private void OnServerJoin(JoinEventArgs args)
         {
             if (!_config.RandItemEnable)
@@ -333,38 +507,16 @@ namespace Plugin
 
             RandomInventory();
         }
+        # endregion
 
-        private void OnRespawn(object o, GetDataHandlers.SpawnEventArgs args)
-        {
-            if (!_config.LockHPEnable)
-            {
-                return;
-            }
+        # region event
 
-            List<TSPlayer> players = TSPlayer.FindByNameOrID(Main.player[args.PlayerId].name);
-            if (players.Count == 0)
-            {
-                args.Player.SendErrorMessage("无效的玩家!");
-            }
-            else if (players.Count > 1)
-            {
-                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
-            }
-            else
-            {
-                var plr = players[0];
-                plr.TPlayer.statLife = _config.LockHPValue;
-                plr.TPlayer.statLifeMax = _config.LockHPValue;
-                // https://github.com/Brycey92/PlayerInfo/blob/terraria-1.4/PlayerInfo/PlayerInfo.cs#L117
-                // PlayerHp
-                NetMessage.SendData(16, -1, -1, null, plr.Index, 0f, 0f, 0f, 0); // Sends Health Packet
-            }
 
-        }
         # endregion
 
 
         # region look player
+        bool ChatItemIsIcon;
         private void LookPlayer(CommandArgs args)
         {
             if (args.Parameters.Count<string>() == 1)
@@ -372,7 +524,12 @@ namespace Plugin
                 args.Player.SendErrorMessage("语法错误，需输入要查看的玩家名");
                 return;
             }
-
+            if ( TShock.VersionNum.CompareTo(new Version(4,5,3,0)) !=-1 )
+            {
+                ChatItemIsIcon = true;
+            } else {
+                ChatItemIsIcon = false;
+            }
             var name = args.Parameters[1];
             var list = TSPlayer.FindByNameOrID(name);
             if (list.Count > 1)
@@ -382,7 +539,6 @@ namespace Plugin
             else if (list.Any())
             {
                 ShowPlayer(list[0].TPlayer, args);
-
             }
             else
             {
@@ -420,7 +576,6 @@ namespace Plugin
             List<string> bank4 = new List<string>();
 
             String s;
-            String trashDesc = GetItemDesc(plr.trashItem);
             for (int i = 0; i < 59; i++)
             {
                 s = GetItemDesc(plr.inventory[i]);
@@ -487,10 +642,14 @@ namespace Plugin
                 s = GetItemDesc(plr.bank4.item[i]);
                 if (s != "") bank4.Add(s);
             }
+            
+            List<String> trash = new List<string>();
+            s = GetItemDesc(plr.trashItem);
+             if (s != "") trash.Add(s);
 
             if (inventory.Count != 0) SendMultipleMessage(args, "●背包：", inventory);
             if (assist.Count != 0) SendMultipleMessage(args, "●钱币、弹药：", assist);
-            if (trashDesc != "") args.Player.SendInfoMessage("●垃圾桶：", trashDesc);
+            if (trash.Count != 0) SendMultipleMessage(args, "●垃圾桶：", trash);
             if (armor.Count != 0) SendMultipleMessage(args, "●装备栏：", armor);
             if (vanity.Count != 0) SendMultipleMessage(args, "●社交栏：", vanity);
             if (dye.Count != 0) SendMultipleMessage(args, "●染料1：", dye);
@@ -504,7 +663,24 @@ namespace Plugin
 
         private string GetItemDesc(Item item)
         {
-            string s = item.Name;
+            string s = "";
+            if (item.netID==0){
+                return s;
+            }
+
+            if( ChatItemIsIcon ){
+                // https://terraria.fandom.com/wiki/Chat
+                // [i/s10:29]   数量
+                // [i/p57:4]    词缀
+                if(item.stack>1){
+                    s = $"[i/s{item.stack}:{item.netID}]";
+                }else {
+                    s = $"[i/p{item.prefix}:{item.netID}]";
+                }
+                return s;
+            }
+
+            s = item.Name;
             var prefixName = TShock.Utils.GetPrefixById(item.prefix);
             if (prefixName != "")
                 s = String.Format("{0}·{1}", prefixName, s);
@@ -531,7 +707,6 @@ namespace Plugin
                 args.Player.SendInfoMessage("生命：{0}/{1}", data.health, data.maxHealth);
                 args.Player.SendInfoMessage("魔力：{0}/{1}", data.mana, data.maxMana);
 
-
                 // accessories
                 // misc
                 List<string> inventory = new List<string>();
@@ -545,9 +720,9 @@ namespace Plugin
                 List<string> bank2 = new List<string>();
                 List<string> bank3 = new List<string>();
                 List<string> bank4 = new List<string>();
+                List<string> trash = new List<string>();
 
                 String s;
-                String trashDesc = "";
                 for (int i = 0; i < 260; i++)
                 {
                     s = GetNetItemDesc(data.inventory[i]);
@@ -559,7 +734,7 @@ namespace Plugin
                     {
                         if (s != "") assist.Add(s);
                     }
-                    else if (i >= 59 && i < 68)
+                    else if (i >= 59 && i < 69)
                     {
                         if (s != "") armor.Add(s);
                     }
@@ -567,7 +742,7 @@ namespace Plugin
                     {
                         if (s != "") vanity.Add(s);
                     }
-                    else if (i >= 79 && i < 89)
+                    else if (i >= 78 && i < 89)
                     {
                         if (s != "") dye.Add(s);
                     }
@@ -597,13 +772,13 @@ namespace Plugin
                     }
                     else if (i == 179)
                     {
-                        if (s != "") trashDesc = s;
+                        if (s != "") trash.Add(s);
                     }
                 }
 
                 if (inventory.Count != 0) SendMultipleMessage(args, "●背包：", inventory);
                 if (assist.Count != 0) SendMultipleMessage(args, "●钱币、弹药：", assist);
-                if (trashDesc != "") args.Player.SendInfoMessage("●垃圾桶：", trashDesc);
+                if (trash.Count != 0) SendMultipleMessage(args, "●垃圾桶：", trash);
                 if (armor.Count != 0) SendMultipleMessage(args, "●装备栏：", armor);
                 if (vanity.Count != 0) SendMultipleMessage(args, "●社交栏：", vanity);
                 if (dye.Count != 0) SendMultipleMessage(args, "●染料1：", dye);
@@ -624,8 +799,26 @@ namespace Plugin
         // 获得物品描述
         private string GetNetItemDesc(NetItem netItem)
         {
-            String itemNameOrId = netItem.NetId.ToString();
+            string s = "";
+
+            if (netItem.NetId==0){
+                return s;
+            }
+
+            if( ChatItemIsIcon ){
+                // https://terraria.fandom.com/wiki/Chat
+                // [i/s10:29]   数量
+                // [i/p57:4]    词缀
+                if(netItem.Stack>1){
+                    s = $"[i/s{netItem.Stack}:{netItem.NetId}]";
+                }else {
+                    s = $"[i/p{netItem.PrefixId}:{netItem.NetId}]";
+                }
+                return s;
+            }
+
             Item item;
+            String itemNameOrId = netItem.NetId.ToString();
             List<Item> matchedItems = TShock.Utils.GetItemByIdOrName(itemNameOrId);
             if (matchedItems.Count == 0)
             {
@@ -639,13 +832,13 @@ namespace Plugin
             else
             {
                 item = matchedItems[0];
-                string s = item.Name;
-                var prefixName = TShock.Utils.GetPrefixById(netItem.PrefixId);
+                s = item.Name;
+                var prefixName = TShock.Utils.GetPrefixById(item.prefix);
                 if (prefixName != "")
                     s = String.Format("{0}·{1}", prefixName, s);
 
-                if (netItem.Stack > 1)
-                    s = String.Format("{0}x{1}", s, netItem.Stack);
+                if (item.stack > 1)
+                    s = String.Format("{0}x{1}", s, item.stack);
 
                 return s;
             }
@@ -653,9 +846,35 @@ namespace Plugin
 
         public void SendMultipleMessage(CommandArgs args, String header, List<String> matches)
         {
-            matches[0] = header + matches[0];
-            var lines = PaginationTools.BuildLinesFromTerms(matches.ToArray());
-            lines.ForEach(args.Player.SendInfoMessage);
+            if( ChatItemIsIcon ){
+                if( matches.Count<=10 ){
+                    matches[0] = header + matches[0];
+                } else {
+                    args.Player.SendInfoMessage(header);
+                }
+                // 一行显示10个物品
+                var s = "";
+                var count=0;
+                for (int i = 0; i < matches.Count; i++)
+                {
+                    s += matches[i] + " ";
+                    count ++;
+                    if (count>=10)
+                    {
+                        args.Player.SendInfoMessage(s);
+                        count = 0;
+                        s = "";
+                    }
+                }
+                if(  s!="" ){
+                    args.Player.SendInfoMessage(s);
+                }
+
+            } else {
+                matches[0] = header + matches[0];
+                var lines = PaginationTools.BuildLinesFromTerms(matches.ToArray());
+                lines.ForEach(args.Player.SendInfoMessage);
+            }
         }
         # endregion
 
