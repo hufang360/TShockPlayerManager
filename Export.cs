@@ -342,7 +342,7 @@ namespace Plugin
         }
 
 
-        private static Item NetItem2Item(NetItem item)
+        public static Item NetItem2Item(NetItem item)
         {
             var i = new Item();
             i.SetDefaults(item.NetId);

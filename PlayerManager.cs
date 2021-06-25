@@ -25,12 +25,6 @@ namespace Plugin
         public static readonly string save_dir = Path.Combine(TShock.SavePath, "PlayerManager");
         public static readonly string config_path = Path.Combine(save_dir, "config.json");
 
-        private static Config _config;
-        private List<NetItem> startingInventory = new List<NetItem>();
-        private int update_count = 0;
-        private int update_total = 60 * 10;
-
-
         public Plugin(Main game) : base(game)
         {
         }
@@ -44,12 +38,8 @@ namespace Plugin
             LoadConfig();
 
             Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm") { HelpText = "角色管理" });
-            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager.lockhp" }, LockHP, "lockhp") { HelpText = "锁血" });
-            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager.startinventory" }, StartInventory, "startinventory", "si") { HelpText = "初始背包管理" });
 
             GetDataHandlers.PlayerSpawn += OnRespawn;
-            ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
-            ServerApi.Hooks.ServerJoin.Register(this, OnServerJoin, 421);
         }
 
         protected override void Dispose(bool disposing)
@@ -57,8 +47,6 @@ namespace Plugin
             if (disposing)
             {
                 GetDataHandlers.PlayerSpawn -= OnRespawn;
-                ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
-                ServerApi.Hooks.ServerJoin.Deregister(this, OnServerJoin);
             }
             base.Dispose(disposing);
         }
@@ -67,10 +55,6 @@ namespace Plugin
 
         private void LoadConfig()
         {
-            startingInventory = TShock.ServerSideCharacterConfig.Settings.StartingInventory;
-
-            _config = Config.Load(config_path);
-            update_total = 60 * _config.LockHPSecond;
         }
 
         private void PlayerManager(CommandArgs args)
@@ -270,250 +254,29 @@ namespace Plugin
         #endregion
 
 
-        # region lock hp
-        private void LockHP(CommandArgs args)
-        {
-            if (args.Parameters.Count == 0)
-            {
-                args.Player.SendInfoMessage("语法错误，输入 /lockhp help 显示帮助信息");
-                return;
-            }
-
-            var choice = args.Parameters[0].ToLowerInvariant();
-            switch (choice)
-            {
-                // 帮助
-                case "help":
-                    args.Player.SendInfoMessage("/lockhp info, 显示功能信息");
-                    args.Player.SendInfoMessage("/lockhp true, 开启 血量锁定");
-                    args.Player.SendInfoMessage("/lockhp false, 关闭 血量锁定");
-                    args.Player.SendInfoMessage("/lockhp <血量>, 设置 锁血值");
-                    break;
-
-                case "info":
-                    args.Player.SendInfoMessage("-----[血量锁定]-----");
-                    if (_config.LockHPEnable)
-                        args.Player.SendInfoMessage("功能: 已打开");
-                    else
-                        args.Player.SendInfoMessage("功能: 已关闭");
-                    args.Player.SendInfoMessage("锁血值：{0}", _config.LockHPValue);
-                    args.Player.SendInfoMessage("频率：{0}", _config.LockHPSecond);
-                    break;
-
-                case "true":
-                    _config.LockHPEnable = true;
-                    args.Player.SendInfoMessage("血量锁定 已打开");
-                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
-                    break;
-
-                case "false":
-                    _config.LockHPEnable = false;
-                    args.Player.SendInfoMessage("血量锁定 已关闭");
-                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
-                    break;
-
-                default:
-                    int num;
-                    if (int.TryParse(choice, out num))
-                    {
-                        if ( num<1){
-                            args.Player.SendErrorMessage("锁血值 不能低于1");
-                        } else{
-                            _config.LockHPValue = num;
-                            args.Player.SendSuccessMessage("锁血值 已改成 {0}", num);
-                            File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
-                        }
-                    }
-                    else
-                    {
-                        args.Player.SendErrorMessage("语法错误");
-                    }
-                    break;
-            }
-
-        }
+        
         private void OnRespawn(object o, GetDataHandlers.SpawnEventArgs args)
         {
-            if (!_config.LockHPEnable)
-                return;
-
             var plr = args.Player;
-            if( plr.TPlayer.statLife > _config.LockHPValue && !plr.Dead ){
-                plr.TPlayer.statLife = _config.LockHPValue;
-                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
-            }
-        }
-        private void OnUpdate(EventArgs args)
-        {
-            if (!_config.LockHPEnable)
-                return;
-
-            if (update_count < update_total)
-            {
-                update_count++;
-                return;
-            }
-            else
-            {
-                update_count = 0;
+            var inv = plr.TPlayer.inventory;
+            Console.WriteLine($"{plr.TPlayer.name}   OnRespawn");
+            var num = 0;
+            for (var i=3; i<10; i++){
+                num += inv[i].netID;
             }
 
-            foreach (TSPlayer plr in TShock.Players)
-            {
-                if (plr != null && !plr.Dead)
-                {
-                    if (plr.TPlayer.statLife > _config.LockHPValue){
-                        plr.TPlayer.statLife = _config.LockHPValue;
-                        NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+            if ( inv[0].netID == 3507 && inv[1].netID==3509 && inv[2].netID==3506 && num==0){
+                var inv2= TShock.ServerSideCharacterConfig.Settings.StartingInventory;
+                for (var i=0; i<inv2.Count; i++){
+                    if( inv[i].netID == 0 ){
+                        inv[i] = ExportPlayer.NetItem2Item( inv2[i] );
+                    } else {
+                        inv[i].netID = inv2[i].NetId;
                     }
+                    NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, plr.Index, (float)i, 0f, 0f, 0);
                 }
             }
         }
-        # endregion
-
-
-        #  region 初始背包管理
-        private void StartInventory(CommandArgs args)
-        {
-            if (args.Parameters.Count ==0)
-            {
-                args.Player.SendInfoMessage("语法错误，输入 /si help 显示帮助信息");
-                return;
-            }
-
-            var choice = args.Parameters[0].ToLowerInvariant();
-            switch (choice)
-            {
-                default:
-                    args.Player.SendErrorMessage("语法错误！");
-                    break;
-
-                // 帮助
-                case "help":
-                    args.Player.SendInfoMessage("/si info, 显示信息");
-                    // args.Player.SendInfoMessage("/si add <物品id/名称> [堆叠数量] [词缀] , 添加物品，堆叠数量和词缀信息可不提供");
-                    // args.Player.SendInfoMessage("/si del <物品id/名称>, 移除物品");
-                    args.Player.SendInfoMessage("/si gif true, 开启 新手礼包功能");
-                    args.Player.SendInfoMessage("/si gif false, 关闭 新手礼包功能");
-                    break;
-
-                case "info":
-                    args.Player.SendInfoMessage("-----[新手礼包]-----");
-                    if (_config.RandItemEnable)
-                        args.Player.SendInfoMessage("功能：已打开");
-                    else
-                        args.Player.SendInfoMessage("功能：已关闭");
-                    break;
-
-                case "gift":
-                    Gift(args);
-                    break;
-            }
-        }
-
-        // 新手礼包
-        private void Gift(CommandArgs args)
-        {
-            if (args.Parameters.Count < 2)
-            {
-                args.Player.SendInfoMessage("语法错误，输入 /si help 显示帮助信息");
-                return;
-            }
-
-            var choice = args.Parameters[1].ToLowerInvariant();
-            switch (choice)
-            {
-                case "true":
-                    _config.RandItemEnable = true;
-                    RandomInventory();
-                    args.Player.SendInfoMessage("新手礼包 已打开");
-                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
-                    break;
-
-                case "false":
-                    _config.RandItemEnable = false;
-                    TShock.ServerSideCharacterConfig.Settings.StartingInventory = startingInventory;
-                    args.Player.SendInfoMessage("新手礼包 已关闭");
-                    File.WriteAllText(config_path, JsonConvert.SerializeObject(_config, Formatting.Indented));
-                    break;
-
-                case "add":
-                    break;
-
-                case "del":
-                    break;
-            }
-        }
-
-        private void RandomInventory()
-        {
-            Random rd = new Random();
-            List<MItem> inve1 = new List<MItem>();
-            List<MItem> inve2 = new List<MItem>();
-
-            inve2 = _config.RandItem1;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem2;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem3;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem4;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem5;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem6;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem7;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem8;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem9;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-            inve2 = _config.RandItem10;
-            if (inve2.Count > 0)
-                inve1.Add(inve2[rd.Next(inve2.Count)]);
-
-
-            List<NetItem> inve = new List<NetItem>();
-            startingInventory.ForEach(i => inve.Add(i));
-            inve1.ForEach( i => i.fixNetID() );
-            inve1.ForEach( i => inve.Add(new NetItem(i.netID, i.stack, i.prefix)) );
-
-            TShock.ServerSideCharacterConfig.Settings.StartingInventory = inve;
-            TShock.Log.ConsoleInfo($"新手礼包 包含 {inve1.Count} 个物品");
-        }
-        private void OnServerJoin(JoinEventArgs args)
-        {
-            if (!_config.RandItemEnable)
-                return;
-
-            RandomInventory();
-        }
-        # endregion
-
-        # region event
-
-
-        # endregion
-
 
         # region look player
         bool ChatItemIsIcon;
