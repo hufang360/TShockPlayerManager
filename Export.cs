@@ -19,39 +19,14 @@ namespace Plugin
         {
             await Task.Run(() =>
             {
-                // 导出全部
                 if (args.Parameters.Count<string>() == 1)
                 {
-                    int successcount = 0;
-                    int faildcount = 0;
-                    var savedlist = new List<string>();
-                    TShock.Players.Where(p => p != null && p.SaveServerCharacter()).ForEach(plr =>
-                    {
-                        savedlist.Add(plr.Name);
-                        if (ExportOne(plr.TPlayer).Result) { args.Player.SendSuccessMessage($"已导出 {plr.Name} 的在线存档."); successcount++; }
-                        else { args.Player.SendErrorMessage($"导出 {plr.Name} 的在线存档时发生错误."); faildcount++; }
-                    });
-                    var allaccount = TShock.UserAccounts.GetUserAccounts();
-                    allaccount.Where(acc => acc != null && !savedlist.Contains(acc.Name)).ForEach(acc =>
-                    {
-                        var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), acc.ID);
-                        if (data != null)
-                        {
-                            if (data.hideVisuals != null)
-                            {
-                                if (ExportOne(ModifyData(acc.Name, data)).Result) { args.Player.SendSuccessMessage($"已导出 {acc.Name} 的存档."); successcount++; }
-                                else { args.Player.SendErrorMessage($"导出 {acc.Name} 的存档时发生错误."); faildcount++; }
-                            }
-                            else args.Player.SendInfoMessage($"玩家 {acc.Name} 的数据不完整, 已跳过.");
-                        }
-                    });
-                    args.Player.SendInfoMessage($"操作完成. 成功: {successcount}, 失败: {faildcount}.");
-
+                    // 导出全部
+                    args.Player.SendInfoMessage("语法错误，请输入玩家名！");
                 }
-
-                // 导出单个
                 else
                 {
+                    // 导出单个
                     var name = args.Parameters[1];
                     var list = TSPlayer.FindByNameOrID(name);
                     string path = Path.Combine(save_dir, name + ".plr");
@@ -91,6 +66,37 @@ namespace Plugin
                         }
                     }
                 }
+            });
+        }
+
+         public static async Task ExportAll(CommandArgs args)
+        {
+            await Task.Run(() =>
+            {
+                    int successcount = 0;
+                    int faildcount = 0;
+                    var savedlist = new List<string>();
+                    TShock.Players.Where(p => p != null && p.SaveServerCharacter()).ForEach(plr =>
+                    {
+                        savedlist.Add(plr.Name);
+                        if (ExportOne(plr.TPlayer).Result) { args.Player.SendSuccessMessage($"已导出 {plr.Name} 的在线存档."); successcount++; }
+                        else { args.Player.SendErrorMessage($"导出 {plr.Name} 的在线存档时发生错误."); faildcount++; }
+                    });
+                    var allaccount = TShock.UserAccounts.GetUserAccounts();
+                    allaccount.Where(acc => acc != null && !savedlist.Contains(acc.Name)).ForEach(acc =>
+                    {
+                        var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), acc.ID);
+                        if (data != null)
+                        {
+                            if (data.hideVisuals != null)
+                            {
+                                if (ExportOne(ModifyData(acc.Name, data)).Result) { args.Player.SendSuccessMessage($"已导出 {acc.Name} 的存档."); successcount++; }
+                                else { args.Player.SendErrorMessage($"导出 {acc.Name} 的存档时发生错误."); faildcount++; }
+                            }
+                            else args.Player.SendInfoMessage($"玩家 {acc.Name} 的数据不完整, 已跳过.");
+                        }
+                    });
+                    args.Player.SendInfoMessage($"操作完成. 成功: {successcount}, 失败: {faildcount}.");
             });
         }
 

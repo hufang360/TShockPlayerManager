@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +7,8 @@ using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
 using Terraria.Localization;
+using TShockAPI.DB;
+using System.Data;
 
 namespace Plugin
 {
@@ -17,13 +18,13 @@ namespace Plugin
 
         #region Plugin Info
         public override string Author => "hufang360";
-        public override string Description => "角色管理";
+        public override string Description => "玩家管理";
         public override string Name => "PlayerManager";
         public override Version Version => Assembly.GetExecutingAssembly().GetName().Version;
         #endregion
 
         public static readonly string save_dir = Path.Combine(TShock.SavePath, "PlayerManager");
-        public static readonly string config_path = Path.Combine(save_dir, "config.json");
+
 
         public Plugin(Main game) : base(game)
         {
@@ -35,27 +36,18 @@ namespace Plugin
         {
             if (!Directory.Exists(save_dir))
                 Directory.CreateDirectory(save_dir);
-            LoadConfig();
 
-            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm") { HelpText = "角色管理" });
-
-            GetDataHandlers.PlayerSpawn += OnRespawn;
+            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm") { HelpText = "玩家管理" });
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                GetDataHandlers.PlayerSpawn -= OnRespawn;
             }
             base.Dispose(disposing);
         }
         #endregion
-
-
-        private void LoadConfig()
-        {
-        }
 
         private void PlayerManager(CommandArgs args)
         {
@@ -73,12 +65,13 @@ namespace Plugin
 
                 // 帮助
                 case "help":
-                    args.Player.SendInfoMessage("/pm export [玩家名], 导出所有玩家的在线存档，可指定只导出某一个玩家");
-                    args.Player.SendInfoMessage("/pm hp <玩家名> <生命值>, 修改单个玩家的生命值");
-                    args.Player.SendInfoMessage("/pm maxhp <玩家名> <生命上限>, 修改单个玩家的生命上限");
-                    args.Player.SendInfoMessage("/pm look <玩家名>, 查看某一个玩家的背包信息");
-                    args.Player.SendInfoMessage("/lockhp help, 血量锁定 功能");
-                    args.Player.SendInfoMessage("/si help, 初始背包和新手礼包 功能");
+                    args.Player.SendInfoMessage("/pm exportall, 导出所有玩家的人物存档");
+                    args.Player.SendInfoMessage("/pm export [玩家名], 导出单个玩家的人物存档");
+                    args.Player.SendInfoMessage("/pm look <玩家名>, 查看玩家");
+                    args.Player.SendInfoMessage("/pm hp <玩家名> <生命值>, 修改生命值");
+                    args.Player.SendInfoMessage("/pm maxhp <玩家名> <生命上限>, 修改生命上限");
+                    args.Player.SendInfoMessage("/pm mana <玩家名> <魔力上限>, 修改魔力值");
+                    args.Player.SendInfoMessage("/pm maxmana <玩家名> <魔力上限>, 修改魔力上限");
                     return;
 
                 // 查看玩家背包
@@ -90,6 +83,13 @@ namespace Plugin
                 case "export":
                     #pragma warning disable 4014
                     ExportPlayer.Export(args);
+                    #pragma warning restore 4014
+                    break;
+
+                // 导出全部
+                case "exportall":
+                    #pragma warning disable 4014
+                    ExportPlayer.ExportAll(args);
                     #pragma warning restore 4014
                     break;
 
@@ -116,31 +116,31 @@ namespace Plugin
                 args.Player.SendInfoMessage("语法错误，/pm hp <玩家名> <生命值>");
                 return;
             }
-            string pname = args.Parameters[1];
-            string pvalue = args.Parameters[2];
-            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
-            if (players.Count == 0)
-            {
-                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            string name = args.Parameters[1];
+            string value = args.Parameters[2];
+            int hp = 0;
+            if (  !int.TryParse(value, out hp) ){
+                hp = 0;
             }
-            else if (players.Count > 1)
-            {
-                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            if (hp<1){
+                args.Player.SendSuccessMessage($"输入的生命值无效, {value}");
+                return;
             }
-            else
+
+
+            TSPlayer plr  = null;
+            TShockAPI.DB.UserAccount plrDB = null;
+            GetPlayer(args, name, out plr, out plrDB);
+            if (plr != null)
             {
-                var plr = players[0];
-                int hp = 0;
-                if ( int.TryParse(pvalue, out hp) ){
-                    if(hp>0){
-                        plr.TPlayer.statLife = hp;
-                        NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
-                        args.Player.SendSuccessMessage($"{plr.Name} 的生命值已修改为 {hp}");
-                    } else {
-                        args.Player.SendSuccessMessage($"输入的生命值无效, {pvalue}");
-                    }
-                } else {
-                    args.Player.SendSuccessMessage($"输入的生命值无效, {pvalue}");
+                plr.TPlayer.statLife = hp;
+                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{plr.Name} 的生命值已修改为 {hp}");
+            }
+            if(plrDB!=null){
+                bool success = StatsDB(hp, 1, plrDB, args);
+                if( success ){
+                    args.Player.SendSuccessMessage($"{plrDB.Name} 的生命值已修改为 {hp}");
                 }
             }
         }
@@ -152,31 +152,30 @@ namespace Plugin
                 args.Player.SendInfoMessage("语法错误，/pm maxhp <玩家名> <生命上限>");
                 return;
             }
-            string pname = args.Parameters[1];
-            string pvalue = args.Parameters[2];
-            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
-            if (players.Count == 0)
-            {
-                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            string name = args.Parameters[1];
+            string value = args.Parameters[2];
+            int maxhp = 0;
+            if (  !int.TryParse(value, out maxhp) ){
+                maxhp = 0;
             }
-            else if (players.Count > 1)
-            {
-                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            if (maxhp<100){
+                args.Player.SendErrorMessage("生命上限，不能低于100!");
+                return;
             }
-            else
+
+            TSPlayer plr  = null;
+            TShockAPI.DB.UserAccount plrDB = null;
+            GetPlayer(args, name, out plr, out plrDB);
+            if (plr != null)
             {
-                var plr = players[0];
-                int maxhp = 0;
-                if ( int.TryParse(pvalue, out maxhp)){
-                    if (maxhp<100){
-                        args.Player.SendErrorMessage("最大生命值，不能低于100!");
-                    } else {
-                        plr.TPlayer.statLifeMax = maxhp;
-                        NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
-                        args.Player.SendSuccessMessage($"{plr.Name} 的最大生命值已修改为 {maxhp}");
-                    }
-                } else {
-                    args.Player.SendSuccessMessage($"输入的最大生命值无效, {pvalue}");
+                plr.TPlayer.statLifeMax = maxhp;
+                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{plr.Name} 的生命上限已修改为 {maxhp}");
+            }
+            if(plrDB!=null){
+                bool success = StatsDB(maxhp, 2, plrDB, args);
+                if( success ){
+                    args.Player.SendSuccessMessage($"{plrDB.Name} 的生命上限已修改为 {maxhp}");
                 }
             }
         }
@@ -187,31 +186,30 @@ namespace Plugin
                 args.Player.SendInfoMessage("语法错误，/pm mana <玩家名> <魔力值>");
                 return;
             }
-            string pname = args.Parameters[1];
-            string pvalue = args.Parameters[2];
-            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
-            if (players.Count == 0)
-            {
-                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            string name = args.Parameters[1];
+            string value = args.Parameters[2];
+            int mana = 0;
+            if (  !int.TryParse(value, out mana) ){
+                mana = 0;
             }
-            else if (players.Count > 1)
-            {
-                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            if (mana<1){
+                args.Player.SendSuccessMessage($"输入的魔力值无效, {value}");
+                return;
             }
-            else
+
+            TSPlayer plr  = null;
+            TShockAPI.DB.UserAccount plrDB = null;
+            GetPlayer(args, name, out plr, out plrDB);
+            if (plr != null)
             {
-                var plr = players[0];
-                int mana = 0;
-                if ( int.TryParse(pvalue, out mana) ){
-                    if(mana>0){
-                        plr.TPlayer.statMana = mana;
-                        NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
-                        args.Player.SendSuccessMessage($"{plr.Name} 的魔力值已修改为 {mana}");
-                    } else {
-                        args.Player.SendSuccessMessage($"输入的魔力值无效, {pvalue}");
-                    }
-                } else {
-                    args.Player.SendSuccessMessage($"输入的魔力值无效, {pvalue}");
+                plr.TPlayer.statMana = mana;
+                NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{plr.Name} 的魔力值已修改为 {mana}");
+            }
+            if(plrDB!=null){
+                bool success = StatsDB(mana, 3, plrDB, args);
+                if( success ){
+                    args.Player.SendSuccessMessage($"{plrDB.Name} 的魔力值已修改为 {mana}");
                 }
             }
         }
@@ -223,60 +221,109 @@ namespace Plugin
                 args.Player.SendInfoMessage("语法错误，/pm maxhp <玩家名> <生命上限>");
                 return;
             }
-            string pname = args.Parameters[1];
-            string pvalue = args.Parameters[2];
-            List<TSPlayer> players = TSPlayer.FindByNameOrID(pname);
-            if (players.Count == 0)
-            {
-                args.Player.SendErrorMessage($"找不到名为 {pname} 的玩家!");
+            string name = args.Parameters[1];
+            string value = args.Parameters[2];
+            int maxMana = 0;
+            if (  !int.TryParse(value, out maxMana) ){
+                maxMana = 0;
             }
-            else if (players.Count > 1)
-            {
-                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+            if (maxMana<20){
+                args.Player.SendErrorMessage("魔力上限，不能低于20!");
+                return;
             }
-            else
+
+            TSPlayer plr  = null;
+            TShockAPI.DB.UserAccount plrDB = null;
+            GetPlayer(args, name, out plr, out plrDB);
+            if (plr != null)
             {
-                var plr = players[0];
-                int mana = 0;
-                if ( int.TryParse(pvalue, out mana)){
-                    if (mana<20){
-                        args.Player.SendErrorMessage("最大魔力值不能低于20!");
-                    } else {
-                        plr.TPlayer.statManaMax = mana;
-                        NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
-                        args.Player.SendSuccessMessage($"{plr.Name} 的最大魔力值已修改为 {mana}");
-                    }
+                plr.TPlayer.statManaMax = maxMana;
+                NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{plr.Name} 的魔力上限已修改为 {maxMana}");
+            }
+            if(plrDB!=null){
+                bool success = StatsDB(maxMana, 4, plrDB, args);
+                if( success ){
+                    args.Player.SendSuccessMessage($"{plrDB.Name} 的魔力上限已修改为 {maxMana}");
+                }
+            }
+        }
+        private bool StatsDB(int vaule, int type, TShockAPI.DB.UserAccount plrDB, CommandArgs args){
+            var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), plrDB.ID);
+            if (data != null)
+            {
+                IDbConnection db = TShock.CharacterDB.database;
+
+                switch (type)
+                {
+                    case 1:
+                    data.health = vaule;
+                    break;
+                    case 2:
+                    data.maxHealth = vaule;
+                    break;
+                    case 3:
+                    data.mana = vaule;
+                    break;
+                    case 4:
+                    data.maxMana = vaule;
+                    break;
+
+                    default:
+                    args.Player.SendErrorMessage("type 传值错误");
+                    return false;
+                }
+                args.Player.SendSuccessMessage("测试是否写入数据库");
+                try
+                {
+                    db.Query("UPDATE tsCharacter SET Health = @0, MaxHealth = @1, Mana = @2, MaxMana = @3 WHERE Account = @4;", data.health, data.maxHealth, data.mana, data.maxMana, plrDB.ID);
+                    // args.Player.SendSuccessMessage(plrDB.Name + "'s stats have been reset!");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    args.Player.SendErrorMessage("An error occurred while resetting!");
+                    TShock.Log.ConsoleError(ex.ToString());
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        private void GetPlayer(CommandArgs args, String name, out TSPlayer plr, out TShockAPI.DB.UserAccount plrDB){
+            plr = null;
+            plrDB = null;
+            var players = TSPlayer.FindByNameOrID($"tsn:{name}");
+             if (players.Count > 1)
+            {
+                if(players[0].TPlayer.name==name){
+                    plr = players[0];
                 } else {
-                    args.Player.SendSuccessMessage($"输入的最大魔力值无效, {pvalue}");
+                    args.Player.SendMultipleMatchError(players);
+                }
+            }
+            else if (players.Any())
+            {
+                plr = players[0];
+            }else{
+                // 离线玩家
+                var offlinePlayers = TShock.UserAccounts.GetUserAccountsByName(name);
+                if (offlinePlayers.Count ==0)
+                {
+                    args.Player.SendErrorMessage($"找不到名为 {name} 的玩家!");
+                }
+                else if (offlinePlayers.Count > 1 && offlinePlayers[0].Name!=name)
+                {
+                    args.Player.SendMultipleMatchError(offlinePlayers);
+                }
+                else if (offlinePlayers.Any())
+                {
+                    plrDB = offlinePlayers[0];
                 }
             }
         }
         #endregion
 
-
-        
-        private void OnRespawn(object o, GetDataHandlers.SpawnEventArgs args)
-        {
-            var plr = args.Player;
-            var inv = plr.TPlayer.inventory;
-            Console.WriteLine($"{plr.TPlayer.name}   OnRespawn");
-            var num = 0;
-            for (var i=3; i<10; i++){
-                num += inv[i].netID;
-            }
-
-            if ( inv[0].netID == 3507 && inv[1].netID==3509 && inv[2].netID==3506 && num==0){
-                var inv2= TShock.ServerSideCharacterConfig.Settings.StartingInventory;
-                for (var i=0; i<inv2.Count; i++){
-                    if( inv[i].netID == 0 ){
-                        inv[i] = ExportPlayer.NetItem2Item( inv2[i] );
-                    } else {
-                        inv[i].netID = inv2[i].NetId;
-                    }
-                    NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, plr.Index, (float)i, 0f, 0f, 0);
-                }
-            }
-        }
 
         # region look player
         bool ChatItemIsIcon;
@@ -284,36 +331,29 @@ namespace Plugin
         {
             if (args.Parameters.Count<string>() == 1)
             {
-                args.Player.SendErrorMessage("语法错误，需输入要查看的玩家名");
+                args.Player.SendErrorMessage("需输入要查看的玩家名");
                 return;
             }
-            if ( TShock.VersionNum.CompareTo(new Version(4,5,3,0)) !=-1 )
+
+            // 控制台显示 物品名称
+            // 4.4.0 -1.4.1.2   [i:4444]
+            // 4.5.0 -1.4.2.2   [女巫扫帚]
+            if ( TShock.VersionNum.CompareTo(new Version(4,5,0,0)) !=-1 )
             {
                 ChatItemIsIcon = true;
             } else {
                 ChatItemIsIcon = false;
             }
+
             var name = args.Parameters[1];
-            var list = TSPlayer.FindByNameOrID(name);
-            if (list.Count > 1)
-            {
-                args.Player.SendMultipleMatchError(list);
+            TSPlayer plr  = null;
+            TShockAPI.DB.UserAccount plrDB = null;
+            GetPlayer(args, name, out plr, out plrDB);
+            if (plr !=null){
+                ShowPlayer(plr.TPlayer, args);
             }
-            else if (list.Any())
-            {
-                ShowPlayer(list[0].TPlayer, args);
-            }
-            else
-            {
-                var offlinelist = TShock.UserAccounts.GetUserAccountsByName(name);
-                if (offlinelist.Count > 1)
-                {
-                    args.Player.SendMultipleMatchError(offlinelist);
-                }
-                else if (offlinelist.Any())
-                {
-                    ShowDBPlayer(offlinelist[0], args);
-                }
+            if(plrDB != null){
+                ShowDBPlayer(plrDB, args);
             }
         }
 
@@ -323,6 +363,9 @@ namespace Plugin
             args.Player.SendInfoMessage("玩家：{0}", plr.name);
             args.Player.SendInfoMessage("生命：{0}/{1}", plr.statLife, plr.statLifeMax);
             args.Player.SendInfoMessage("魔力：{0}/{1}", plr.statMana, plr.statManaMax);
+            args.Player.SendInfoMessage("渔夫任务：{0} 次", plr.anglerQuestsFinished);
+            args.Player.SendInfoMessage("生态火把：{0}", plr.UsingBiomeTorches ? "已使用 火把神徽章":"未使用 火把神徽章");
+            args.Player.SendInfoMessage("饰品槽：{0}", plr.extraAccessory ? "已使用 恶魔之心":"未使用 恶魔之心" );
 
             // accessories
             // misc
@@ -405,7 +448,7 @@ namespace Plugin
                 s = GetItemDesc(plr.bank4.item[i]);
                 if (s != "") bank4.Add(s);
             }
-            
+
             List<String> trash = new List<string>();
             s = GetItemDesc(plr.trashItem);
              if (s != "") trash.Add(s);
@@ -469,6 +512,9 @@ namespace Plugin
                 args.Player.SendInfoMessage("玩家：{0}", name);
                 args.Player.SendInfoMessage("生命：{0}/{1}", data.health, data.maxHealth);
                 args.Player.SendInfoMessage("魔力：{0}/{1}", data.mana, data.maxMana);
+                args.Player.SendInfoMessage("渔夫任务：{0} 次", data.questsCompleted );
+                args.Player.SendInfoMessage("生态火把：{0}", data.unlockedBiomeTorches==1 ? "已使用 火把神徽章":"未使用 火把神徽章");
+                args.Player.SendInfoMessage("饰品槽：{0}", data.extraSlot==1 ? "已使用 恶魔之心":"未使用 恶魔之心" );
 
                 // accessories
                 // misc
