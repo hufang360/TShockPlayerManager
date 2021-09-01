@@ -14,6 +14,7 @@ namespace Plugin
     public class ExportPlayer
     {
         private static readonly string save_dir = Path.Combine(TShock.SavePath, "PlayerManager");
+        private static readonly string plr_dir = Path.Combine(TShock.SavePath, "PlayerManager", "export");
 
         public static async Task Export(CommandArgs args)
         {
@@ -29,7 +30,7 @@ namespace Plugin
                     // 导出单个
                     var name = args.Parameters[1];
                     var list = TSPlayer.FindByNameOrID(name);
-                    string path = Path.Combine(save_dir, name + ".plr");
+                    string path = Path.Combine(plr_dir, name + ".plr");
                     if (list.Count > 1) args.Player.SendMultipleMatchError(list);
                     else if (list.Any())
                     {
@@ -105,10 +106,10 @@ namespace Plugin
         {
             return await Task.Run(() =>
             {
-                string path = Path.Combine(save_dir, plr.name + ".plr");
+                string path = Path.Combine(plr_dir, plr.name + ".plr");
                 try
                 {
-                    string folder = save_dir;
+                    string folder = plr_dir;
                     if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
                     if (File.Exists(path))
                     {

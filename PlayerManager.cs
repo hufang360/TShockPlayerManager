@@ -34,17 +34,11 @@ namespace Plugin
         #region Initialize/Dispose
         public override void Initialize()
         {
-            if (!Directory.Exists(save_dir))
-                Directory.CreateDirectory(save_dir);
-
             Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm") { HelpText = "玩家管理" });
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-            }
             base.Dispose(disposing);
         }
         #endregion
@@ -65,13 +59,12 @@ namespace Plugin
 
                 // 帮助
                 case "help":
-                    args.Player.SendInfoMessage("/pm exportall, 导出所有玩家的人物存档");
-                    args.Player.SendInfoMessage("/pm export [玩家名], 导出单个玩家的人物存档");
                     args.Player.SendInfoMessage("/pm look <玩家名>, 查看玩家");
                     args.Player.SendInfoMessage("/pm hp <玩家名> <生命值>, 修改生命值");
                     args.Player.SendInfoMessage("/pm maxhp <玩家名> <生命上限>, 修改生命上限");
                     args.Player.SendInfoMessage("/pm mana <玩家名> <魔力上限>, 修改魔力值");
                     args.Player.SendInfoMessage("/pm maxmana <玩家名> <魔力上限>, 修改魔力上限");
+                    args.Player.SendInfoMessage("/pm export [玩家名], 导出玩家存档，玩家名留空则导出全部玩家的存档");
                     return;
 
                 // 查看玩家背包
@@ -81,28 +74,32 @@ namespace Plugin
 
                 // 导出
                 case "export":
+                    if (!Directory.Exists(save_dir)){
+                        Directory.CreateDirectory(save_dir);
+                    }
                     #pragma warning disable 4014
-                    ExportPlayer.Export(args);
+                    if (args.Parameters.Count()>1){
+                        ExportPlayer.Export(args);
+                    } else {
+                        ExportPlayer.ExportAll(args);
+                    }
                     #pragma warning restore 4014
                     break;
 
-                // 导出全部
-                case "exportall":
-                    #pragma warning disable 4014
-                    ExportPlayer.ExportAll(args);
-                    #pragma warning restore 4014
-                    break;
 
+                //  生命
                 case "hp":
                     ModifyHP(args);
                     break;
                 case "maxhp":
                     ModifyMaxHP(args);
                     break;
+
+                //  魔力
                 case "mana":
                     ModifyMana(args);
                     break;
-                case "maxMana":
+                case "maxmana":
                     ModifyMaxMana(args);
                     break;
             }
@@ -248,6 +245,8 @@ namespace Plugin
                 }
             }
         }
+
+
         private bool StatsDB(int vaule, int type, TShockAPI.DB.UserAccount plrDB, CommandArgs args){
             var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), plrDB.ID);
             if (data != null)
@@ -273,7 +272,6 @@ namespace Plugin
                     args.Player.SendErrorMessage("type 传值错误");
                     return false;
                 }
-                args.Player.SendSuccessMessage("测试是否写入数据库");
                 try
                 {
                     db.Query("UPDATE tsCharacter SET Health = @0, MaxHealth = @1, Mana = @2, MaxMana = @3 WHERE Account = @4;", data.health, data.maxHealth, data.mana, data.maxMana, plrDB.ID);
@@ -363,10 +361,9 @@ namespace Plugin
             args.Player.SendInfoMessage("玩家：{0}", plr.name);
             args.Player.SendInfoMessage("生命：{0}/{1}", plr.statLife, plr.statLifeMax);
             args.Player.SendInfoMessage("魔力：{0}/{1}", plr.statMana, plr.statManaMax);
-            args.Player.SendInfoMessage("渔夫任务：{0} 次", plr.anglerQuestsFinished);
-            args.Player.SendInfoMessage("生态火把：{0}", plr.UsingBiomeTorches ? "已使用 火把神徽章":"未使用 火把神徽章");
-            args.Player.SendInfoMessage("饰品槽：{0}", plr.extraAccessory ? "已使用 恶魔之心":"未使用 恶魔之心" );
-
+            args.Player.SendInfoMessage("渔夫任务：已完成 {0} 次", plr.anglerQuestsFinished);
+            args.Player.SendInfoMessage("生态火把：{0}", plr.UsingBiomeTorches ? "已激活":"未激活" );
+            args.Player.SendInfoMessage("饰品槽：{0}", plr.extraAccessory ? "已激活":"未激活" );
             // accessories
             // misc
             List<string> inventory = new List<string>();
@@ -485,7 +482,6 @@ namespace Plugin
                 }
                 return s;
             }
-
             s = item.Name;
             var prefixName = TShock.Utils.GetPrefixById(item.prefix);
             if (prefixName != "")
@@ -504,17 +500,17 @@ namespace Plugin
             var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), dbplr.ID);
             if (data != null)
             {
-                if (data.hideVisuals == null)
-                {
-                    args.Player.SendErrorMessage($"玩家 {name} 的数据不完整, 无法查看.");
-                    return;
-                }
+                // if (data.hideVisuals == null)
+                // {
+                //     args.Player.SendErrorMessage($"玩家 {name} 的数据不完整, 无法查看.");
+                //     return;
+                // }
                 args.Player.SendInfoMessage("玩家：{0}", name);
                 args.Player.SendInfoMessage("生命：{0}/{1}", data.health, data.maxHealth);
                 args.Player.SendInfoMessage("魔力：{0}/{1}", data.mana, data.maxMana);
-                args.Player.SendInfoMessage("渔夫任务：{0} 次", data.questsCompleted );
-                args.Player.SendInfoMessage("生态火把：{0}", data.unlockedBiomeTorches==1 ? "已使用 火把神徽章":"未使用 火把神徽章");
-                args.Player.SendInfoMessage("饰品槽：{0}", data.extraSlot==1 ? "已使用 恶魔之心":"未使用 恶魔之心" );
+                args.Player.SendInfoMessage("渔夫任务：已完成 {0} 次", data.questsCompleted );
+                args.Player.SendInfoMessage("生态火把：{0}", data.unlockedBiomeTorches==1 ? "已激活":"未激活" );
+                args.Player.SendInfoMessage("饰品槽：{0}", data.extraSlot==1 ? "已激活":"未激活" );
 
                 // accessories
                 // misc
@@ -609,7 +605,6 @@ namespace Plugin
         private string GetNetItemDesc(NetItem netItem)
         {
             string s = "";
-
             if (netItem.NetId==0){
                 return s;
             }
@@ -642,12 +637,12 @@ namespace Plugin
             {
                 item = matchedItems[0];
                 s = item.Name;
-                var prefixName = TShock.Utils.GetPrefixById(item.prefix);
+                var prefixName = TShock.Utils.GetPrefixById(netItem.PrefixId);
                 if (prefixName != "")
                     s = String.Format("{0}·{1}", prefixName, s);
 
-                if (item.stack > 1)
-                    s = String.Format("{0}x{1}", s, item.stack);
+                if (netItem.Stack > 1)
+                    s = String.Format("{0}x{1}", s, netItem.Stack);
 
                 return s;
             }
