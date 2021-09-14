@@ -1,43 +1,47 @@
 # TShockPlayerManager
 
-查看玩家背包、导出玩家数据，背包快照。
+导出玩家存档，查看玩家背包。
 
 
 # 部分指令
 ```
-/playermanager help, 玩家管理 帮助
-/pm help, 同上一条
+/ppm help, 帮助
 
-/pm look <玩家名>, 查看玩家
+/ppm look <玩家名>, 查看玩家
+/lookbag <玩家名>, 查看玩家（普通用户）
 
-/pm export [玩家名], 导出单个玩家存档
-/pm exportall, 导出全部玩家存档
+/ppm export <玩家名>, 导出单个玩家存档
+/ppm exportall, 导出全部玩家存档
 
-/pm hp <玩家名>, 修改生命值
-/pm maxhp <玩家名> <生命上限>, 修改生命上限
-/pm mana <玩家名>, 修改魔力值
-/pm maxmana <玩家名> <魔力上限>, 修改魔力上限
+/ppm maxhp <玩家名> <生命上限>, 修改生命上限
+/ppm maxmana <玩家名> <魔力上限>, 修改魔力上限
+/ppm hp <玩家名>, 修改生命值
+/ppm mana <玩家名>, 修改魔力值
 
 
-/bagsnapshot help, 背包快照 帮助
-/bs help, 同上一条
-/bs add <玩家名>, 添加背包快照
-/bs del <玩家名>, 删除背包快照
-/bs look <玩家名>, 查看背包快照
-/bs recover <玩家名>, 恢复背包快照
+// 主指令的其它写法
+/ppm = /playermanager
+.ppm = /ppm
 
-/bs addall, 添加背包快照-全部在线玩家
-/bs aa, 同上一条
-/bs recoverall, 添加背包快照-全部在线玩家
-/bs ra, 同上一条
+// 简写
+/ppm export = /ppm e
+/ppm exportall = /ppm ea
+/ppm maxhp = /ppm mh
+/ppm maxmana = /ppm mm
+```
 
-/savemybag, 为自己创建背包快照
-/smb, 同上一条
-/lookmybag, 查看自己创建的背包快照
-/lmb, 同上一条
+# 权限
+```
+playermanager
+lookbag
+```
+
+开放查背包功能
+```
+/group addperm default lookbag
 ```
 
 
 # 说明
-导出玩家数据，使用了此项目的部分代码： 
+导出玩家数据部分，使用了此项目的部分代码： 
 https://github.com/Megghy/PlayerExport

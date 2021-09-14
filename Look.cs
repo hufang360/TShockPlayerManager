@@ -7,7 +7,6 @@ namespace Plugin
 {
     public class Look
     {
-        private static bool ChatItemIsIcon;
         public static void LookPlayer(CommandArgs args, string name)
         {
             if( name == "" )
@@ -15,25 +14,15 @@ namespace Plugin
                 args.Player.SendErrorMessage("输入要查看的玩家名");
                 return;
             }
-            // 控制台显示 物品名称
-            // 4.4.0 -1.4.1.2   [i:4444]
-            // 4.5.0 -1.4.2.2   [女巫扫帚]
-            if ( TShock.VersionNum.CompareTo(new Version(4,5,0,0)) !=-1 )
-            {
-                ChatItemIsIcon = true;
-            } else {
-                ChatItemIsIcon = false;
-            }
+
             FoundPlayer found  = Util.GetPlayer(args.Player, name);
             if( !found.valid )
                 return;
 
             if( found.online )
-            {
                 ShowPlayer(args.Player, found.plr.TPlayer);
-            } else {
+            else
                 ShowDBPlayer(args.Player, found.Name, found.ID);
-            }
         }
 
         private static void ShowPlayer(TSPlayer op, Player plr)
@@ -128,7 +117,7 @@ namespace Plugin
 
             List<String> trash = new List<string>();
             s = GetItemDesc(plr.trashItem);
-             if (s != "") trash.Add(s);
+            if (s != "") trash.Add(s);
 
             if (inventory.Count != 0) SendMultipleMessage(op, "●背包：", inventory);
             if (assist.Count != 0) SendMultipleMessage(op, "●钱币、弹药：", assist);
@@ -146,30 +135,19 @@ namespace Plugin
 
         private  static string GetItemDesc(Item item)
         {
+            if (item.netID==0)
+                return "";
+
             string s = "";
-            if (item.netID==0){
-                return s;
-            }
-
-            if( ChatItemIsIcon ){
-                // https://terraria.fandom.com/wiki/Chat
-                // [i/s10:29]   数量
-                // [i/p57:4]    词缀
-                if(item.stack>1){
-                    s = $"[i/s{item.stack}:{item.netID}]";
-                }else {
+            if(item.stack>1)
+            {
+                s = $"[i/s{item.stack}:{item.netID}]";
+            }else {
+                if( item.prefix.Equals(0) )
+                    s = $"[i:{item.netID}]";
+                else
                     s = $"[i/p{item.prefix}:{item.netID}]";
-                }
-                return s;
             }
-            s = item.Name;
-            var prefixName = TShock.Utils.GetPrefixById(item.prefix);
-            if (prefixName != "")
-                s = String.Format("{0}·{1}", prefixName, s);
-
-            if (item.stack > 1)
-                s = String.Format("{0}x{1}", s, item.stack);
-
             return s;
         }
 
@@ -189,7 +167,7 @@ namespace Plugin
                 op.SendInfoMessage("生命：{0}/{1}", data.health, data.maxHealth);
                 op.SendInfoMessage("魔力：{0}/{1}", data.mana, data.maxMana);
                 op.SendInfoMessage("渔夫任务完成数：{0} 次", data.questsCompleted );
-                op.SendInfoMessage("生态火把：{0}", data.unlockedBiomeTorches==1 ? "已激活":"未激活" );
+                Compatible.ShowDataUnlockedBiomeTorches(op, data);
                 op.SendInfoMessage("额外饰品栏：{0}", data.extraSlot==1 ? "已激活":"未激活" );
 
                 // accessories
@@ -289,48 +267,24 @@ namespace Plugin
                 return s;
             }
 
-            if( ChatItemIsIcon ){
-                // https://terraria.fandom.com/wiki/Chat
-                // [i/s10:29]   数量
-                // [i/p57:4]    词缀
-                if(netItem.Stack>1){
-                    s = $"[i/s{netItem.Stack}:{netItem.NetId}]";
-                }else {
+            // https://terraria.fandom.com/wiki/Chat
+            // [i:29]   数量
+            // [i/s10:29]   数量
+            // [i/p57:4]    词缀
+            if(netItem.Stack>1){
+                s = $"[i/s{netItem.Stack}:{netItem.NetId}]";
+            }else {
+                if( netItem.PrefixId.Equals(0) )
+                    s = $"[i:{netItem.NetId}]";
+                else
                     s = $"[i/p{netItem.PrefixId}:{netItem.NetId}]";
-                }
-                return s;
             }
-
-            Item item;
-            String itemNameOrId = netItem.NetId.ToString();
-            List<Item> matchedItems = TShock.Utils.GetItemByIdOrName(itemNameOrId);
-            if (matchedItems.Count == 0)
-            {
-                return "";
-            }
-            else if (matchedItems.Count > 1)
-            {
-                // args.Player.SendMultipleMatchError(matchedItems.Select(i => $"{i.Name}({i.netID})"));
-                return "";
-            }
-            else
-            {
-                item = matchedItems[0];
-                s = item.Name;
-                var prefixName = TShock.Utils.GetPrefixById(netItem.PrefixId);
-                if (prefixName != "")
-                    s = String.Format("{0}·{1}", prefixName, s);
-
-                if (netItem.Stack > 1)
-                    s = String.Format("{0}x{1}", s, netItem.Stack);
-
-                return s;
-            }
+            return s;
         }
 
         public  static  void SendMultipleMessage(TSPlayer op, String header, List<String> matches)
         {
-            if( ChatItemIsIcon ){
+            // if( ChatItemIsIcon ){
                 if( matches.Count<=10 ){
                     matches[0] = header + matches[0];
                 } else {
@@ -354,11 +308,11 @@ namespace Plugin
                     op.SendInfoMessage(s);
                 }
 
-            } else {
-                matches[0] = header + matches[0];
-                var lines = PaginationTools.BuildLinesFromTerms(matches.ToArray());
-                lines.ForEach(op.SendInfoMessage);
-            }
+            // } else {
+            //     matches[0] = header + matches[0];
+            //     var lines = PaginationTools.BuildLinesFromTerms(matches.ToArray());
+            //     lines.ForEach(op.SendInfoMessage);
+            // }
         }
 
 
@@ -368,16 +322,6 @@ namespace Plugin
             if( invarr.Length !=260 ){
                 op.SendErrorMessage("角色快照：本地快照配置有误！");
                 return;
-            }
-
-            // 控制台显示 物品名称
-            // 4.4.0 -1.4.1.2   [i:4444]
-            // 4.5.0 -1.4.2.2   [女巫扫帚]
-            if ( TShock.VersionNum.CompareTo(new Version(4,5,0,0)) !=-1 )
-            {
-                ChatItemIsIcon = true;
-            } else {
-                ChatItemIsIcon = false;
             }
 
             // accessories

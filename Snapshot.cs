@@ -350,6 +350,11 @@ namespace Plugin
 					var index = i - (NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots);
 					player.TPlayer.miscDyes[index] = NetItem2Item(invarr[i]);
 				}
+                else if(i==179)
+                {
+                    // 回收站
+					player.TPlayer.trashItem = NetItem2Item(invarr[i]);
+                }
 				else if (i < NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots + NetItem.PiggySlots) //piggy Bank
 				{
 					//var index = i - (NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots);
@@ -372,8 +377,7 @@ namespace Plugin
 				}
 				else
 				{
-                    // 回收站
-					player.TPlayer.trashItem = NetItem2Item(invarr[i]);
+                    // Console.WriteLine("有漏网之鱼："+i);
 				}
 			}
 
@@ -453,9 +457,6 @@ namespace Plugin
 				slot++;
 			}
 
-			var trashSlot = NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots + NetItem.PiggySlots + NetItem.SafeSlots;
-			NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, player.Index, (float)trashSlot, 0f, 0f, 0); //trash slot
-
 			for (int k = 0; k < Player.maxBuffs; k++)
 			{
                 // buff
@@ -515,7 +516,6 @@ namespace Plugin
 				slot++;
 			}
 
-            NetMessage.SendData((int)PacketTypes.PlayerSlot, player.Index, -1, NetworkText.Empty, player.Index, (float)trashSlot, 0f, 0f, 0); //trash slot
 			for (int k = 0; k < Player.maxBuffs; k++)
 			{
 				player.TPlayer.buffType[k] = 0;
@@ -525,6 +525,8 @@ namespace Plugin
 			NetMessage.SendData((int)PacketTypes.PlayerMana, player.Index, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
 			NetMessage.SendData((int)PacketTypes.PlayerHp, player.Index, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
 			NetMessage.SendData((int)PacketTypes.PlayerBuff, player.Index, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
+
+			NetMessage.SendData(39, player.Index, -1, NetworkText.Empty, 400);
 		}
 
         private static Item NetItem2Item(string invstr)

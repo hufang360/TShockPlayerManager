@@ -3,6 +3,10 @@
 
 ._*
 
+OTAPI.dll
+TerrariaServer.exe
+TShockAPI.dll
+
 # User-specific files
 *.suo
 *.user
