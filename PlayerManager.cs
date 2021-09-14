@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Data;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
+using TShockAPI.DB;
 
 namespace Plugin
 {
@@ -32,8 +34,12 @@ namespace Plugin
         public override void Initialize()
         {
             Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm") { HelpText = "玩家管理" });
-            Commands.ChatCommands.Add(new Command(new List<string>() { "lookbag" }, LookBag, "lookbag", "lb") { HelpText = "查看玩家背包" });
-            Commands.ChatCommands.Add(new Command(new List<string>() { "playersnapshot" }, Snapshot.PlayerSnapshot, "playersnapshot", "ps") { HelpText = "存档快照" });
+            // Commands.ChatCommands.Add(new Command(new List<string>() { "lookbag" }, LookBag, "lookbag", "lb") { HelpText = "查看背包" });
+
+            Snapshot.load();
+            Commands.ChatCommands.Add(new Command(new List<string>() { "bagsnapshot" }, Snapshot.BagSnapshot, "bagsnapshot", "bs") { HelpText = "背包快照" });
+            Commands.ChatCommands.Add(new Command(new List<string>() { "savemybag" }, Snapshot.SaveMyBag, "savemybag", "smb") { HelpText = "为自己创建背包快照" });
+            Commands.ChatCommands.Add(new Command(new List<string>() { "lookmybag" }, Snapshot.LookMyBag, "lookmybag", "lmb") { HelpText = "查看自己创建背包快照" });
         }
 
         protected override void Dispose(bool disposing)
@@ -43,6 +49,7 @@ namespace Plugin
         #endregion
 
 
+        #region PlayerManager
         private void PlayerManager(CommandArgs args)
         {
             if (args.Parameters.Count<string>() == 0)
@@ -77,15 +84,19 @@ namespace Plugin
 
                 // 导出
                 case "export":
-                    if (!Directory.Exists(save_dir)){
+                    if (!Directory.Exists(save_dir))
                         Directory.CreateDirectory(save_dir);
-                    }
                     #pragma warning disable 4014
-                    if (args.Parameters.Count()>1){
-                        ExportPlayer.Export(args);
-                    } else {
-                        ExportPlayer.ExportAll(args);
-                    }
+                    ExportPlayer.Export(args);
+                    #pragma warning restore 4014
+                    break;
+                
+                // 导出全部
+                case "exportall":
+                    if (!Directory.Exists(save_dir))
+                        Directory.CreateDirectory(save_dir);
+                    #pragma warning disable 4014
+                    ExportPlayer.ExportAll(args);
                     #pragma warning restore 4014
                     break;
 
@@ -107,12 +118,17 @@ namespace Plugin
                     break;
             }
         }
+        #endregion
+        
 
+        #region lookbag
         private void LookBag(CommandArgs args)
         {
             var name = args.Parameters.Count<string>() > 0 ?  args.Parameters[0] : "";
             Look.LookPlayer(args, name);
         }
+        #endregion
 
+        
     }
 }

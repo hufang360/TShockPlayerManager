@@ -28,19 +28,19 @@ namespace Plugin
                 return;
             }
 
-            FoundPlayer plr  = Util.GetPlayer(args.Player, name);
-            if( plr.ID==-1 )
+            FoundPlayer found  = Util.GetPlayer(args.Player, name);
+            if( !found.valid )
                 return;
 
-            if( plr.online )
+            if( found.online )
             {
-                plr.plr.TPlayer.statLife = hp;
-                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.plr.Index, 0f, 0f, 0f, 0);
-                args.Player.SendSuccessMessage($"{plr.Name} 的生命值已修改为 {hp}");
+                found.plr.TPlayer.statLife = hp;
+                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, found.plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{found.Name} 的生命值已修改为 {hp}");
             } else {
-                bool success = StatsDB(args.Player, plr.ID, hp, 1);
+                bool success = StatsDB(args.Player, found.ID, hp, 1);
                 if( success ){
-                    args.Player.SendSuccessMessage($"{plr.Name} 的生命值已修改为 {hp}");
+                    args.Player.SendSuccessMessage($"{found.Name} 的生命值已修改为 {hp}");
                 }
             }
         }
@@ -63,19 +63,19 @@ namespace Plugin
                 return;
             }
 
-            FoundPlayer plr  = Util.GetPlayer(args.Player, name);
-            if( plr.ID==-1 )
+            FoundPlayer found  = Util.GetPlayer(args.Player, name);
+            if( !found.valid )
                 return;
 
-            if( plr.online )
+            if( found.online )
             {
-                plr.plr.TPlayer.statLifeMax = maxhp;
-                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, plr.plr.Index, 0f, 0f, 0f, 0);
-                args.Player.SendSuccessMessage($"{plr.Name} 的生命上限已修改为 {maxhp}");
+                found.plr.TPlayer.statLifeMax = maxhp;
+                NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, found.plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{found.Name} 的生命上限已修改为 {maxhp}");
             } else {
-                bool success = StatsDB(args.Player, plr.ID, maxhp, 2);
+                bool success = StatsDB(args.Player, found.ID, maxhp, 2);
                 if( success ){
-                    args.Player.SendSuccessMessage($"{plr.Name} 的生命上限已修改为 {maxhp}");
+                    args.Player.SendSuccessMessage($"{found.Name} 的生命上限已修改为 {maxhp}");
                 }
             }
         }
@@ -97,19 +97,19 @@ namespace Plugin
                 return;
             }
 
-            FoundPlayer plr  = Util.GetPlayer(args.Player, name);
-            if( plr.ID==-1 )
+            FoundPlayer found  = Util.GetPlayer(args.Player, name);
+            if( !found.valid )
                 return;
 
-            if( plr.online )
+            if( found.online )
             {
-                plr.plr.TPlayer.statMana = mana;
-                NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.plr.Index, 0f, 0f, 0f, 0);
-                args.Player.SendSuccessMessage($"{plr.Name} 的魔力值已修改为 {mana}");
+                found.plr.TPlayer.statMana = mana;
+                NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, found.plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{found.Name} 的魔力值已修改为 {mana}");
             } else {
-                bool success = StatsDB(args.Player, plr.ID, mana, 3);
+                bool success = StatsDB(args.Player, found.ID, mana, 3);
                 if( success ){
-                    args.Player.SendSuccessMessage($"{plr.Name} 的魔力值已修改为 {mana}");
+                    args.Player.SendSuccessMessage($"{found.Name} 的魔力值已修改为 {mana}");
                 }
             }
         }
@@ -132,19 +132,19 @@ namespace Plugin
                 return;
             }
 
-            FoundPlayer plr  = Util.GetPlayer(args.Player, name);
-            if( plr.ID==-1 )
+            FoundPlayer found  = Util.GetPlayer(args.Player, name);
+            if( !found.valid )
                 return;
                 
-            if( plr.online )
+            if( found.online )
             {
-                plr.plr.TPlayer.statManaMax = maxMana;
-                NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, plr.plr.Index, 0f, 0f, 0f, 0);
-                args.Player.SendSuccessMessage($"{plr.Name} 的魔力上限已修改为 {maxMana}");
+                found.plr.TPlayer.statManaMax = maxMana;
+                NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, found.plr.Index, 0f, 0f, 0f, 0);
+                args.Player.SendSuccessMessage($"{found.Name} 的魔力上限已修改为 {maxMana}");
             } else {
-                bool success = StatsDB(args.Player, plr.ID, maxMana, 4);
+                bool success = StatsDB(args.Player, found.ID, maxMana, 4);
                 if( success ){
-                    args.Player.SendSuccessMessage($"{plr.Name} 的魔力上限已修改为 {maxMana}");
+                    args.Player.SendSuccessMessage($"{found.Name} 的魔力上限已修改为 {maxMana}");
                 }
             }
         }

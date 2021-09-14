@@ -14,15 +14,14 @@ namespace Plugin
             var found = new FoundPlayer();
 
             var players = GetPlr(name);
-             if (players.Count > 1 && players[0].Name!=name)
+             if (players.Count>1 && players[0].Name!=name)
             {
                 op.SendMultipleMatchError(players);
             }
             else if (players.Any())
             {
                 // plr = players[0];
-                found.online = true;
-                found.plr = players[0];
+                found.SetOnline(players[0]);
             }
             else
             {
@@ -38,9 +37,7 @@ namespace Plugin
                 }
                 else if (offline.Any())
                 {
-                    found.online = false;
-                    found.ID = offline[0].ID;
-                    found.Name = offline[0].Name;
+                    found.SetOffline(offline[0].ID, offline[0].Name);
                 }
             }
 
@@ -88,16 +85,6 @@ namespace Plugin
             UserAccountLite account = new UserAccountLite();
 			account.ID = result.Get<int>("ID");
 			account.Name = result.Get<string>("Username");
-
-            // UserAccount
-			// account.ID = result.Get<int>("ID");
-			// account.Group = result.Get<string>("Usergroup");
-			// account.Password = result.Get<string>("Password");
-			// account.UUID = result.Get<string>("UUID");
-			// account.Name = result.Get<string>("Username");
-			// account.Registered = result.Get<string>("Registered");
-			// account.LastAccessed = result.Get<string>("LastAccessed");
-			// account.KnownIps = result.Get<string>("KnownIps");
 			return account;
 		}
     }
@@ -105,7 +92,7 @@ namespace Plugin
     public class UserAccountLite
     {
         // TShock.UserAccounts.GetUserAccountsByName(name);
-        public int ID = 0;
+        public int ID = -1;
         public string Name = "";
 
         // QueryResult result)
@@ -123,12 +110,35 @@ namespace Plugin
     }
 
     public class FoundPlayer
-    {
+    {   
+        // id从1开始，-1表示非ssc玩家
+        // 此id，仅对db数据才有效
         public int ID = -1;
         public string Name = "";
 
         public bool online = false;
 
         public TSPlayer plr = null;
+
+        public bool valid = false;
+
+        public void SetOnline(TSPlayer p)
+        {
+            valid = true;
+            online = true;
+            
+            plr = p;
+            ID = p.Index;
+            Name = p.Name;
+        }
+        public void SetOffline(int id, string name)
+        {
+            valid = true;
+            online = false;
+
+            ID = id;
+            Name = name;
+
+        }
     }
 }

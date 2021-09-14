@@ -24,15 +24,15 @@ namespace Plugin
             } else {
                 ChatItemIsIcon = false;
             }
-            FoundPlayer plr  = Util.GetPlayer(args.Player, name);
-            if( plr.ID==-1 )
+            FoundPlayer found  = Util.GetPlayer(args.Player, name);
+            if( !found.valid )
                 return;
 
-            if( plr.online )
+            if( found.online )
             {
-                ShowPlayer(args.Player, plr.plr.TPlayer);
+                ShowPlayer(args.Player, found.plr.TPlayer);
             } else {
-                ShowDBPlayer(args.Player, plr.Name, plr.ID);
+                ShowDBPlayer(args.Player, found.Name, found.ID);
             }
         }
 
@@ -361,5 +361,106 @@ namespace Plugin
             }
         }
 
+
+        public static void LookInventoryStr(TSPlayer op, string invstr)
+        {
+            var invarr = invstr.Split('~');
+            if( invarr.Length !=260 ){
+                op.SendErrorMessage("角色快照：本地快照配置有误！");
+                return;
+            }
+
+            // 控制台显示 物品名称
+            // 4.4.0 -1.4.1.2   [i:4444]
+            // 4.5.0 -1.4.2.2   [女巫扫帚]
+            if ( TShock.VersionNum.CompareTo(new Version(4,5,0,0)) !=-1 )
+            {
+                ChatItemIsIcon = true;
+            } else {
+                ChatItemIsIcon = false;
+            }
+
+            // accessories
+            // misc
+            List<string> inventory = new List<string>();
+            List<string> assist = new List<string>();
+            List<string> armor = new List<string>();
+            List<string> vanity = new List<string>();
+            List<string> dye = new List<string>();
+            List<string> miscEquips = new List<string>();
+            List<string> miscDyes = new List<string>();
+            List<string> bank = new List<string>();
+            List<string> bank2 = new List<string>();
+            List<string> bank3 = new List<string>();
+            List<string> bank4 = new List<string>();
+            List<string> trash = new List<string>();
+
+            String s;
+            for (int i = 0; i < 260; i++)
+            {
+                s = GetNetItemDesc( NetItem.Parse(invarr[i]));
+                if (i < 50)
+                {
+                    if (s != "") inventory.Add(s);
+                }
+                else if (i >= 50 && i < 59)
+                {
+                    if (s != "") assist.Add(s);
+                }
+                else if (i >= 59 && i < 69)
+                {
+                    if (s != "") armor.Add(s);
+                }
+                else if (i >= 69 && i < 78)
+                {
+                    if (s != "") vanity.Add(s);
+                }
+                else if (i >= 78 && i < 89)
+                {
+                    if (s != "") dye.Add(s);
+                }
+                else if (i >= 89 && i < 94)
+                {
+                    if (s != "") miscEquips.Add(s);
+                }
+                else if (i >= 94 && i < 99)
+                {
+                    if (s != "") miscDyes.Add(s);
+                }
+                else if (i >= 99 && i < 139)
+                {
+                    if (s != "") bank.Add(s);
+                }
+                else if (i >= 139 && i < 179)
+                {
+                    if (s != "") bank2.Add(s);
+                }
+                else if (i >= 180 && i < 220)
+                {
+                    if (s != "") bank3.Add(s);
+                }
+                else if (i >= 220 && i < 260)
+                {
+                    if (s != "") bank4.Add(s);
+                }
+                else if (i == 179)
+                {
+                    if (s != "") trash.Add(s);
+                }
+            }
+
+            if (inventory.Count != 0) SendMultipleMessage(op, "●背包：", inventory);
+            if (assist.Count != 0) SendMultipleMessage(op, "●钱币、弹药：", assist);
+            if (trash.Count != 0) SendMultipleMessage(op, "●垃圾桶：", trash);
+            if (armor.Count != 0) SendMultipleMessage(op, "●装备栏：", armor);
+            if (vanity.Count != 0) SendMultipleMessage(op, "●社交栏：", vanity);
+            if (dye.Count != 0) SendMultipleMessage(op, "●染料1：", dye);
+            if (miscEquips.Count != 0) SendMultipleMessage(op, "●工具栏：", miscEquips);
+            if (miscDyes.Count != 0) SendMultipleMessage(op, "●染料2：", miscDyes);
+            if (bank.Count != 0) SendMultipleMessage(op, "●储蓄罐：", bank);
+            if (bank2.Count != 0) SendMultipleMessage(op, "●保险箱：", bank2);
+            if (bank3.Count != 0) SendMultipleMessage(op, "●护卫熔炉：", bank3);
+            if (bank4.Count != 0) SendMultipleMessage(op, "●虚空保险箱：", bank4);
+        }
     }
 }
