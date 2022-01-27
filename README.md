@@ -24,6 +24,7 @@
 .ppm = /ppm
 
 // 简写
+/ppm look = /ppm l
 /ppm export = /ppm e
 /ppm exportall = /ppm ea
 /ppm maxhp = /ppm mh
