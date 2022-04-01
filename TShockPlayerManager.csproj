@@ -59,6 +59,7 @@
     <Compile Include="Modify.cs" />
     <Compile Include="Util.cs" />
     <Compile Include="Compatible.cs" />
+    <Compile Include="Snapshot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

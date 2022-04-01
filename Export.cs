@@ -6,8 +6,10 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Terraria;
 using Terraria.GameContent.Creative;
+using Terraria.ID;
 using Terraria.IO;
 using TShockAPI;
+
 
 namespace Plugin
 {
@@ -18,7 +20,7 @@ namespace Plugin
         private static string GenTimeDir()
         {
             DateTime dt = DateTime.Now;
-            string timeStr = string.Format("{0:yyyy-MMdd-HHmm-ss}",dt);
+            string timeStr = string.Format("{0:yyyy-MMdd-HHmm-ss}", dt);
             string plr_dir = Path.Combine(save_dir, timeStr);
 
             if (!Directory.Exists(plr_dir))
@@ -34,21 +36,29 @@ namespace Plugin
                 var list = TSPlayer.FindByNameOrID(name);
                 string path = Path.Combine(GenTimeDir(), name + ".plr");
 
-                if (list.Count > 1){
+                if (list.Count > 1)
+                {
                     op.SendMultipleMatchError(list);
 
-                } else if (list.Any()) {
-                    if (ExportOne(list[0].TPlayer,path).Result)
+                }
+                else if (list.Any())
+                {
+                    if (ExportOne(list[0].TPlayer, path).Result)
                         op.SendSuccessMessage($"已导出玩家 {list[0].Name} 的存档至 {path}.");
                     else
                         op.SendErrorMessage($"导出失败.");
 
-                } else {
+                }
+                else
+                {
                     var offlinelist = TShock.UserAccounts.GetUserAccountsByName(name);
-                    if (offlinelist.Count > 1){
+                    if (offlinelist.Count > 1)
+                    {
                         op.SendMultipleMatchError(offlinelist);
 
-                    } else if (offlinelist.Any()) {
+                    }
+                    else if (offlinelist.Any())
+                    {
                         name = offlinelist[0].Name;
                         op.SendInfoMessage($"玩家 {name} 未在线, 将导出离线存档...");
                         var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), offlinelist[0].ID);
@@ -64,11 +74,15 @@ namespace Plugin
                             else
                                 op.SendErrorMessage($"导出失败.");
 
-                        } else {
+                        }
+                        else
+                        {
                             op.SendErrorMessage($"未能从数据库中获取到玩家数据.");
                         }
 
-                    } else {
+                    }
+                    else
+                    {
                         op.SendErrorMessage($"未找到名称中包含 {name} 的玩家.");
                     }
                 }
@@ -90,10 +104,13 @@ namespace Plugin
                 {
                     savedlist.Add(plr.Name);
                     string path1 = Path.Combine(plr_dir, plr.Name + ".plr");
-                    if (ExportOne(plr.TPlayer, path1).Result) {
+                    if (ExportOne(plr.TPlayer, path1).Result)
+                    {
                         op.SendSuccessMessage($"已导出 {plr.Name} 的在线存档.");
                         successcount++;
-                    } else {
+                    }
+                    else
+                    {
                         op.SendErrorMessage($"导出 {plr.Name} 的在线存档时发生错误.");
                         faildcount++;
                     }
@@ -106,16 +123,22 @@ namespace Plugin
                     var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), acc.ID);
                     if (data != null)
                     {
-                        if (data.hideVisuals != null) {
+                        if (data.hideVisuals != null)
+                        {
                             string path2 = Path.Combine(plr_dir, acc.Name + ".plr");
-                            if (ExportOne(ModifyData(acc.Name, data), path2).Result) {
+                            if (ExportOne(ModifyData(acc.Name, data), path2).Result)
+                            {
                                 op.SendSuccessMessage($"已导出 {acc.Name} 的存档.");
                                 successcount++;
-                            } else {
+                            }
+                            else
+                            {
                                 op.SendErrorMessage($"导出 {acc.Name} 的存档时发生错误.");
                                 faildcount++;
                             }
-                        } else{
+                        }
+                        else
+                        {
                             op.SendInfoMessage($"玩家 {acc.Name} 的数据不完整, 已跳过.");
                         }
                     }
@@ -295,7 +318,8 @@ namespace Plugin
                                 long value = DateTime.UtcNow.ToBinary();
                                 binaryWriter.Write(value);
                                 binaryWriter.Write(player.golferScoreAccumulated);
-                                player.creativeTracker.Save(binaryWriter);
+                                SaveSacrifice(binaryWriter);
+                                // player.creativeTracker.Save(binaryWriter);
                                 player.SaveTemporaryItemSlotContents(binaryWriter);
                                 CreativePowerManager.Instance.SaveToPlayer(player, binaryWriter);
                                 binaryWriter.Flush();
@@ -310,6 +334,18 @@ namespace Plugin
                 catch (Exception ex) { File.Delete(path); TShock.Log.ConsoleError(ex.Message); }
                 return false;
             });
+        }
+
+        public static void SaveSacrifice(BinaryWriter writer)
+        {
+
+            Dictionary<int, int> dictionary = TShock.ResearchDatastore.GetSacrificedItems();
+            writer.Write(dictionary.Count);
+            foreach (KeyValuePair<int, int> item in dictionary)
+            {
+                writer.Write(ContentSamples.ItemPersistentIdsByNetIds[item.Key]);
+                writer.Write(item.Value);
+            }
         }
 
 
@@ -328,7 +364,9 @@ namespace Plugin
                 player.statLifeMax = data.maxHealth;
                 player.statMana = data.mana;
                 player.statManaMax = data.maxMana;
-                player.extraAccessory = data.extraSlot==1;
+                player.extraAccessory = data.extraSlot == 1;
+
+                player.difficulty = (byte)Main.GameModeInfo.Id;
 
                 // 火把神
                 Compatible.ModifyDataBiomeTorches(player, data);

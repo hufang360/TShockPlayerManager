@@ -29,8 +29,20 @@ namespace Plugin
         #region Initialize/Dispose
         public override void Initialize()
         {
-            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "ppm") { HelpText = "玩家管理" });
+            foreach (Command c in Commands.ChatCommands)
+            {
+                if (c.Names.Contains("pm"))
+                    c.Names.Remove("pm");
+            }
+
+            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm", "ppm") { HelpText = "玩家管理" });
             Commands.ChatCommands.Add(new Command(new List<string>() { "lookbag" }, LookBag, "lookbag", "lb") { HelpText = "查看背包" });
+
+
+            Snapshot.load();
+            Commands.ChatCommands.Add(new Command(new List<string>() { "bagsnapshot" }, Snapshot.BagSnapshot, "bagsnapshot", "bs") { HelpText = "背包快照管理" });
+            Commands.ChatCommands.Add(new Command(new List<string>() { "savemybag" }, Snapshot.SaveMyBag, "savemybag", "smb") { HelpText = "保存背包快照" });
+            Commands.ChatCommands.Add(new Command(new List<string>() { "lookmybag" }, Snapshot.LookMyBag, "lookmybag", "lmb") { HelpText = "查看背包快照" });
         }
 
         protected override void Dispose(bool disposing)
@@ -45,7 +57,7 @@ namespace Plugin
         {
             if (args.Parameters.Count<string>() == 0)
             {
-                args.Player.SendErrorMessage("语法错误，/ppm help 可查询帮助信息");
+                args.Player.SendErrorMessage("语法错误，/pm help 可查询帮助信息");
                 return;
             }
 
@@ -58,14 +70,15 @@ namespace Plugin
                 // 帮助
                 case "help":
                 case "h":
-                    args.Player.SendInfoMessage("/ppm look <玩家名>, 查看玩家");
+                    args.Player.SendInfoMessage("/pm look <玩家名>, 查看玩家");
                     args.Player.SendInfoMessage("/lookbg <玩家名>, 查看背包（普通用户）");
-                    args.Player.SendInfoMessage("/ppm maxhp <玩家名> <生命上限>, 修改生命上限");
-                    args.Player.SendInfoMessage("/ppm maxmana <玩家名> <魔力上限>, 修改魔力上限");
-                    args.Player.SendInfoMessage("/ppm hp <玩家名> <生命值>, 修改生命值");
-                    args.Player.SendInfoMessage("/ppm mana <玩家名> <魔力上限>, 修改魔力值");
-                    args.Player.SendInfoMessage("/ppm export [玩家名], 导出某个玩家存档");
-                    args.Player.SendInfoMessage("/ppm exportall, 导出玩家存档");
+                    args.Player.SendInfoMessage("/pm maxhp <玩家名> <生命上限>, 修改生命上限");
+                    args.Player.SendInfoMessage("/pm maxmana <玩家名> <魔力上限>, 修改魔力上限");
+                    args.Player.SendInfoMessage("/pm hp <玩家名> <生命值>, 修改生命值");
+                    args.Player.SendInfoMessage("/pm mana <玩家名> <魔力上限>, 修改魔力值");
+                    args.Player.SendInfoMessage("/pm export <玩家名>, 导出某个玩家存档");
+                    args.Player.SendInfoMessage("/pm exportall, 导出玩家存档");
+                    //args.Player.SendInfoMessage("/pm list, 查看玩家列表");
                     return;
 
                 // 查看玩家背包
@@ -73,14 +86,20 @@ namespace Plugin
                 case "l":
                     string name = "";
                     args.Parameters.RemoveAt(0);
-                    if( args.Parameters.Count==0 ){
-                        if( !args.Player.RealPlayer ){
-                            args.Player.SendErrorMessage("请输入玩家名，/ppm look <玩家名>");
+                    if (args.Parameters.Count == 0)
+                    {
+                        if (!args.Player.RealPlayer)
+                        {
+                            args.Player.SendErrorMessage("请输入玩家名，/pm look <玩家名>");
                             return;
-                        } else {
+                        }
+                        else
+                        {
                             name = args.Player.Name;
                         }
-                    } else {
+                    }
+                    else
+                    {
                         name = string.Join("", args.Parameters);
                     }
                     Look.LookPlayer(args, name);
@@ -99,7 +118,7 @@ namespace Plugin
                     ExportPlayer.Export(args.Player, string.Join("", args.Parameters));
                     #pragma warning restore 4014
                     break;
-                
+
                 // 导出全部
                 case "exportall":
                 case "ea":
@@ -126,29 +145,39 @@ namespace Plugin
                 case "mm":
                     Modify.ModifyMaxMana(args);
                     break;
+
+                // 玩家列表
+                case "list":
+                    break;
             }
         }
         #endregion
-        
+
 
         #region lookbag
         private void LookBag(CommandArgs args)
         {
             string name = "";
-            if( args.Parameters.Count==0 ){
-                if( !args.Player.RealPlayer ){
+            if (args.Parameters.Count == 0)
+            {
+                if (!args.Player.RealPlayer)
+                {
                     args.Player.SendErrorMessage("请输入玩家名，/lookbag <玩家名>");
                     return;
-                } else {
+                }
+                else
+                {
                     name = args.Player.Name;
                 }
-            } else {
+            }
+            else
+            {
                 name = string.Join("", args.Parameters);
             }
             Look.LookPlayer(args, name);
         }
         #endregion
 
-        
+
     }
 }
