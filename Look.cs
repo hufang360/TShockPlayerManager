@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using Terraria;
 using TShockAPI;
 
@@ -7,19 +7,26 @@ namespace Plugin
 {
     public class Look
     {
+        private static bool ChatItemIsIcon;
         public static void LookPlayer(CommandArgs args, string name)
         {
-            if( name == "" )
+            if (name == "")
             {
                 args.Player.SendErrorMessage("输入要查看的玩家名");
                 return;
             }
 
-            FoundPlayer found  = Util.GetPlayer(args.Player, name);
-            if( !found.valid )
+            // 控制台显示 物品名称
+            // 4.4.0 -1.4.1.2   [i:4444]
+            // 4.5.0 -1.4.2.2   [女巫扫帚]
+            ChatItemIsIcon = TShock.VersionNum.CompareTo(new Version(4, 5, 0, 0)) >=0;
+            Console.WriteLine($"ChatItemIsIcon:");
+
+            FoundPlayer found = Util.GetPlayer(args.Player, name);
+            if (!found.valid)
                 return;
 
-            if( found.online )
+            if (found.online)
                 ShowPlayer(args.Player, found.plr.TPlayer);
             else
                 ShowDBPlayer(args.Player, found.Name, found.ID);
@@ -27,12 +34,13 @@ namespace Plugin
 
         private static void ShowPlayer(TSPlayer op, Player plr)
         {
-           op.SendInfoMessage("玩家：{0}", plr.name);
-           op.SendInfoMessage("生命：{0}/{1}", plr.statLife, plr.statLifeMax);
-           op.SendInfoMessage("魔力：{0}/{1}", plr.statMana, plr.statManaMax);
-           op.SendInfoMessage("渔夫任务完成数：{0} 次", plr.anglerQuestsFinished);
-           op.SendInfoMessage("生态火把：{0}", plr.UsingBiomeTorches ? "已激活":"未激活" );
-           op.SendInfoMessage("额外饰品栏：{0}", plr.extraAccessory ? "已激活":"未激活" );
+            op.SendInfoMessage("玩家：{0}", plr.name);
+            op.SendInfoMessage("生命：{0}/{1}", plr.statLife, plr.statLifeMax);
+            op.SendInfoMessage("魔力：{0}/{1}", plr.statMana, plr.statManaMax);
+            op.SendInfoMessage("渔夫任务完成数：{0} 次", plr.anglerQuestsFinished);
+            Compatible.ShowPlrUnlockedBiomeTorches(op,plr);
+            op.SendInfoMessage("生态火把：{0}", plr.UsingBiomeTorches ? "已激活" : "未激活");
+            op.SendInfoMessage("额外饰品栏：{0}", plr.extraAccessory ? "已激活" : "未激活");
             // accessories
             // misc
             List<string> inventory = new List<string>();
@@ -47,7 +55,7 @@ namespace Plugin
             List<string> bank3 = new List<string>();
             List<string> bank4 = new List<string>();
 
-            String s;
+            string s;
             for (int i = 0; i < 59; i++)
             {
                 s = GetItemDesc(plr.inventory[i]);
@@ -133,26 +141,40 @@ namespace Plugin
             if (bank4.Count != 0) SendMultipleMessage(op, "●虚空保险箱：", bank4);
         }
 
-        private  static string GetItemDesc(Item item)
+        private static string GetItemDesc(Item item)
         {
-            if (item.netID==0)
+            if (item.netID == 0)
                 return "";
 
-            string s = "";
-            if(item.stack>1)
+            if (ChatItemIsIcon)
             {
-                s = $"[i/s{item.stack}:{item.netID}]";
-            }else {
-                if( item.prefix.Equals(0) )
-                    s = $"[i:{item.netID}]";
+                if (item.stack > 1)
+                {
+                    return $"[i/s{item.stack}:{item.netID}]";
+                }
                 else
-                    s = $"[i/p{item.prefix}:{item.netID}]";
+                {
+                    if (item.prefix.Equals(0))
+                        return $"[i:{item.netID}]";
+                    else
+                        return $"[i/p{item.prefix}:{item.netID}]";
+                }
             }
+
+            string s;
+            s = item.Name;
+            string prefixName = TShock.Utils.GetPrefixById(item.prefix);
+            if (prefixName != "")
+                s = string.Format("{0}·{1}", prefixName, s);
+
+            if (item.stack > 1)
+                s = string.Format("{0}x{1}", s, item.stack);
+
             return s;
         }
 
 
-        private  static void ShowDBPlayer(TSPlayer op, String username, int userid)
+        private static void ShowDBPlayer(TSPlayer op, String username, int userid)
         {
             var name = username;
             var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), userid);
@@ -166,9 +188,9 @@ namespace Plugin
                 op.SendInfoMessage("玩家：{0}", name);
                 op.SendInfoMessage("生命：{0}/{1}", data.health, data.maxHealth);
                 op.SendInfoMessage("魔力：{0}/{1}", data.mana, data.maxMana);
-                op.SendInfoMessage("渔夫任务完成数：{0} 次", data.questsCompleted );
+                op.SendInfoMessage("渔夫任务完成数：{0} 次", data.questsCompleted);
                 Compatible.ShowDataUnlockedBiomeTorches(op, data);
-                op.SendInfoMessage("额外饰品栏：{0}", data.extraSlot==1 ? "已激活":"未激活" );
+                op.SendInfoMessage("额外饰品栏：{0}", data.extraSlot == 1 ? "已激活" : "未激活");
 
                 // accessories
                 // misc
@@ -260,53 +282,85 @@ namespace Plugin
         }
 
         // 获得物品描述
-        private  static string GetNetItemDesc(NetItem netItem)
+        private static string GetNetItemDesc(NetItem netItem)
         {
-            string s = "";
-            if (netItem.NetId==0){
+            if (netItem.NetId == 0) return "";
+
+            if( ChatItemIsIcon)
+            {
+                // https://terraria.fandom.com/wiki/Chat
+                // [i:29]   数量
+                // [i/s10:29]   数量
+                // [i/p57:4]    词缀
+                if (netItem.Stack > 1)
+                {
+                    return $"[i/s{netItem.Stack}:{netItem.NetId}]";
+                }
+                else
+                {
+                    if (netItem.PrefixId.Equals(0))
+                        return $"[i:{netItem.NetId}]";
+                    else
+                        return $"[i/p{netItem.PrefixId}:{netItem.NetId}]";
+                }
+            }
+
+            Item item;
+            String itemNameOrId = netItem.NetId.ToString();
+            List<Item> matchedItems = TShock.Utils.GetItemByIdOrName(itemNameOrId);
+            if (matchedItems.Count == 0)
+            {
+                return "";
+            }
+            else if (matchedItems.Count > 1)
+            {
+                // args.Player.SendMultipleMatchError(matchedItems.Select(i => $"{i.Name}({i.netID})"));
+                return "";
+            }
+            else
+            {
+                item = matchedItems[0];
+                string s = item.Name;
+                var prefixName = TShock.Utils.GetPrefixById(netItem.PrefixId);
+                if (prefixName != "")
+                    s = string.Format("{0}·{1}", prefixName, s);
+
+                if (netItem.Stack > 1)
+                    s = string.Format("{0}x{1}", s, netItem.Stack);
+
                 return s;
             }
-
-            // https://terraria.fandom.com/wiki/Chat
-            // [i:29]   数量
-            // [i/s10:29]   数量
-            // [i/p57:4]    词缀
-            if(netItem.Stack>1){
-                s = $"[i/s{netItem.Stack}:{netItem.NetId}]";
-            }else {
-                if( netItem.PrefixId.Equals(0) )
-                    s = $"[i:{netItem.NetId}]";
-                else
-                    s = $"[i/p{netItem.PrefixId}:{netItem.NetId}]";
-            }
-            return s;
         }
 
-        public  static  void SendMultipleMessage(TSPlayer op, String header, List<String> matches)
+        public static void SendMultipleMessage(TSPlayer op, string header, List<string> matches)
         {
             // if( ChatItemIsIcon ){
-                if( matches.Count<=10 ){
-                    matches[0] = header + matches[0];
-                } else {
-                    op.SendInfoMessage(header);
-                }
-                // 一行显示10个物品
-                var s = "";
-                var count=0;
-                for (int i = 0; i < matches.Count; i++)
+            if (matches.Count <= 10)
+            {
+                matches[0] = header + matches[0];
+            }
+            else
+            {
+                op.SendInfoMessage(header);
+            }
+            // 一行显示10个物品
+            var s = "";
+            var count = 0;
+            for (int i = 0; i < matches.Count; i++)
+            {
+                s += matches[i] + " ";
+                count++;
+                if (count >= 10)
                 {
-                    s += matches[i] + " ";
-                    count ++;
-                    if (count>=10)
-                    {
-                        op.SendInfoMessage(s);
-                        count = 0;
-                        s = "";
-                    }
-                }
-                if(  s!="" ){
                     op.SendInfoMessage(s);
+                    count = 0;
+                    s = "";
                 }
+            }
+            if (s != "")
+            {
+                op.SendInfoMessage(s);
+            }
 
             // } else {
             //     matches[0] = header + matches[0];
@@ -319,7 +373,8 @@ namespace Plugin
         public static void LookInventoryStr(TSPlayer op, string invstr)
         {
             var invarr = invstr.Split('~');
-            if( invarr.Length !=260 ){
+            if (invarr.Length != 260)
+            {
                 op.SendErrorMessage("角色快照：本地快照配置有误！");
                 return;
             }
@@ -342,7 +397,7 @@ namespace Plugin
             String s;
             for (int i = 0; i < 260; i++)
             {
-                s = GetNetItemDesc( NetItem.Parse(invarr[i]));
+                s = GetNetItemDesc(NetItem.Parse(invarr[i]));
                 if (i < 50)
                 {
                     if (s != "") inventory.Add(s);

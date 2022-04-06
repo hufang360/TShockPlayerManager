@@ -5,30 +5,30 @@
 
 # 部分指令
 ```
-/ppm help, 帮助
+/pm help, 帮助
 
-/ppm look <玩家名>, 查看玩家
+/pm look <玩家名>, 查看玩家
 /lookbag <玩家名>, 查看玩家（普通用户）
 
-/ppm export <玩家名>, 导出单个玩家存档
-/ppm exportall, 导出全部玩家存档
+/pm export <玩家名>, 导出单个玩家存档
+/pm exportall, 导出全部玩家存档
 
-/ppm maxhp <玩家名> <生命上限>, 修改生命上限
-/ppm maxmana <玩家名> <魔力上限>, 修改魔力上限
-/ppm hp <玩家名>, 修改生命值
-/ppm mana <玩家名>, 修改魔力值
+/pm maxhp <玩家名> <生命上限>, 修改生命上限
+/pm maxmana <玩家名> <魔力上限>, 修改魔力上限
+/pm hp <玩家名>, 修改生命值
+/pm mana <玩家名>, 修改魔力值
 
 
 // 主指令的其它写法
-/ppm = /playermanager
-.ppm = /ppm
+/pm = /playermanager
+.pm = /pm
 
 // 简写
-/ppm look = /ppm l
-/ppm export = /ppm e
-/ppm exportall = /ppm ea
-/ppm maxhp = /ppm mh
-/ppm maxmana = /ppm mm
+/pm look = /pm l
+/pm export = /pm e
+/pm exportall = /pm ea
+/pm maxhp = /pm mh
+/pm maxmana = /pm mm
 ```
 
 # 权限

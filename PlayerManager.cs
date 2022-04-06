@@ -39,10 +39,10 @@ namespace Plugin
             Commands.ChatCommands.Add(new Command(new List<string>() { "lookbag" }, LookBag, "lookbag", "lb") { HelpText = "查看背包" });
 
 
-            Snapshot.load();
-            Commands.ChatCommands.Add(new Command(new List<string>() { "bagsnapshot" }, Snapshot.BagSnapshot, "bagsnapshot", "bs") { HelpText = "背包快照管理" });
-            Commands.ChatCommands.Add(new Command(new List<string>() { "savemybag" }, Snapshot.SaveMyBag, "savemybag", "smb") { HelpText = "保存背包快照" });
-            Commands.ChatCommands.Add(new Command(new List<string>() { "lookmybag" }, Snapshot.LookMyBag, "lookmybag", "lmb") { HelpText = "查看背包快照" });
+            //Snapshot.load();
+            //Commands.ChatCommands.Add(new Command(new List<string>() { "bagsnapshot" }, Snapshot.BagSnapshot, "bagsnapshot", "bs") { HelpText = "背包快照管理" });
+            //Commands.ChatCommands.Add(new Command(new List<string>() { "savemybag" }, Snapshot.SaveMyBag, "savemybag", "smb") { HelpText = "保存背包快照" });
+            //Commands.ChatCommands.Add(new Command(new List<string>() { "lookmybag" }, Snapshot.LookMyBag, "lookmybag", "lmb") { HelpText = "查看背包快照" });
         }
 
         protected override void Dispose(bool disposing)
@@ -53,9 +53,9 @@ namespace Plugin
 
 
         #region PlayerManager
-        private void PlayerManager(CommandArgs args)
+        private async void PlayerManager(CommandArgs args)
         {
-            if (args.Parameters.Count<string>() == 0)
+            if (args.Parameters.Count() == 0)
             {
                 args.Player.SendErrorMessage("语法错误，/pm help 可查询帮助信息");
                 return;
@@ -78,7 +78,6 @@ namespace Plugin
                     args.Player.SendInfoMessage("/pm mana <玩家名> <魔力上限>, 修改魔力值");
                     args.Player.SendInfoMessage("/pm export <玩家名>, 导出某个玩家存档");
                     args.Player.SendInfoMessage("/pm exportall, 导出玩家存档");
-                    //args.Player.SendInfoMessage("/pm list, 查看玩家列表");
                     return;
 
                 // 查看玩家背包
@@ -114,17 +113,13 @@ namespace Plugin
                         args.Player.SendInfoMessage("请输入玩家名！");
                         return;
                     }
-                    #pragma warning disable 4014
-                    ExportPlayer.Export(args.Player, string.Join("", args.Parameters));
-                    #pragma warning restore 4014
+                    await ExportPlayer.Export(args.Player, string.Join("", args.Parameters));
                     break;
 
                 // 导出全部
                 case "exportall":
                 case "ea":
-                    #pragma warning disable 4014
-                    ExportPlayer.ExportAll(args.Player);
-                    #pragma warning restore 4014
+                    await ExportPlayer.ExportAll(args.Player);
                     break;
 
 
@@ -144,10 +139,6 @@ namespace Plugin
                 case "maxmana":
                 case "mm":
                     Modify.ModifyMaxMana(args);
-                    break;
-
-                // 玩家列表
-                case "list":
                     break;
             }
         }
