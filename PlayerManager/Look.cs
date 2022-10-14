@@ -19,8 +19,8 @@ namespace Plugin
             // 控制台显示 物品名称
             // 4.4.0 -1.4.1.2   [i:4444]
             // 4.5.0 -1.4.2.2   [女巫扫帚]
-            ChatItemIsIcon = TShock.VersionNum.CompareTo(new Version(4, 5, 0, 0)) >=0;
-            Console.WriteLine($"ChatItemIsIcon:");
+            ChatItemIsIcon = TShock.VersionNum.CompareTo(new Version(4, 5, 0, 0)) >= 0;
+            //Console.WriteLine($"ChatItemIsIcon:");
 
             FoundPlayer found = Util.GetPlayer(args.Player, name);
             if (!found.valid)
@@ -34,13 +34,16 @@ namespace Plugin
 
         private static void ShowPlayer(TSPlayer op, Player plr)
         {
-            op.SendInfoMessage("玩家：{0}", plr.name);
-            op.SendInfoMessage("生命：{0}/{1}", plr.statLife, plr.statLifeMax);
-            op.SendInfoMessage("魔力：{0}/{1}", plr.statMana, plr.statManaMax);
-            op.SendInfoMessage("渔夫任务完成数：{0} 次", plr.anglerQuestsFinished);
-            Compatible.ShowPlrUnlockedBiomeTorches(op,plr);
-            op.SendInfoMessage("生态火把：{0}", plr.UsingBiomeTorches ? "已激活" : "未激活");
-            op.SendInfoMessage("额外饰品栏：{0}", plr.extraAccessory ? "已激活" : "未激活");
+            op.SendInfoMessage("[i:267]玩家：{0}", plr.name);
+            op.SendInfoMessage("[i:29]生命：{0}/{1}", plr.statLife, plr.statLifeMax);
+            op.SendInfoMessage("[i:109]魔力：{0}/{1}", plr.statMana, plr.statManaMax);
+            op.SendInfoMessage("[i:2294]渔夫：{0} 次任务", plr.anglerQuestsFinished);
+
+            string text = $"[i:3335]增强：" +
+                $"{Util.CFlag(plr.extraAccessory, "[i:3335]恶魔之心")}, " +
+                $"{Util.CFlag(plr.UsingBiomeTorches, "[i:5043]火把神徽章")}";
+            op.SendInfoMessage(text);
+
             // accessories
             // misc
             List<string> inventory = new List<string>();
@@ -127,18 +130,18 @@ namespace Plugin
             s = GetItemDesc(plr.trashItem);
             if (s != "") trash.Add(s);
 
-            if (inventory.Count != 0) SendMultipleMessage(op, "●背包：", inventory);
-            if (assist.Count != 0) SendMultipleMessage(op, "●钱币、弹药：", assist);
-            if (trash.Count != 0) SendMultipleMessage(op, "●垃圾桶：", trash);
-            if (armor.Count != 0) SendMultipleMessage(op, "●装备栏：", armor);
-            if (vanity.Count != 0) SendMultipleMessage(op, "●社交栏：", vanity);
-            if (dye.Count != 0) SendMultipleMessage(op, "●染料1：", dye);
-            if (miscEquips.Count != 0) SendMultipleMessage(op, "●工具栏：", miscEquips);
-            if (miscDyes.Count != 0) SendMultipleMessage(op, "●染料2：", miscDyes);
-            if (bank.Count != 0) SendMultipleMessage(op, "●储蓄罐：", bank);
-            if (bank2.Count != 0) SendMultipleMessage(op, "●保险箱：", bank2);
-            if (bank3.Count != 0) SendMultipleMessage(op, "●护卫熔炉：", bank3);
-            if (bank4.Count != 0) SendMultipleMessage(op, "●虚空保险箱：", bank4);
+            if (inventory.Count != 0) SendMultipleMessage(op, "[i:5343]背包：", inventory);
+            if (trash.Count != 0) SendMultipleMessage(op, "[i:2339]垃圾桶：", trash);
+            if (assist.Count != 0) SendMultipleMessage(op, "[i:3104]钱弹：", assist);
+            if (armor.Count != 0) SendMultipleMessage(op, "[i:3097]装备栏：", armor);
+            if (vanity.Count != 0) SendMultipleMessage(op, "[i:4559]社交栏：", vanity);
+            if (dye.Count != 0) SendMultipleMessage(op, "[i:1066]染料1：", dye);
+            if (miscEquips.Count != 0) SendMultipleMessage(op, "[i:84]工具栏：", miscEquips);
+            if (miscDyes.Count != 0) SendMultipleMessage(op, "[i:1066]染料2：", miscDyes);
+            if (bank.Count != 0) SendMultipleMessage(op, "[i:87]储蓄罐：", bank);
+            if (bank2.Count != 0) SendMultipleMessage(op, "[i:346]保险箱：", bank2);
+            if (bank3.Count != 0) SendMultipleMessage(op, "[i:3813]护卫熔炉：", bank3);
+            if (bank4.Count != 0) SendMultipleMessage(op, "[i:4131]虚空保险箱：", bank4);
         }
 
         private static string GetItemDesc(Item item)
@@ -185,12 +188,15 @@ namespace Plugin
                 //     args.Player.SendErrorMessage($"玩家 {name} 的数据不完整, 无法查看.");
                 //     return;
                 // }
-                op.SendInfoMessage("玩家：{0}", name);
-                op.SendInfoMessage("生命：{0}/{1}", data.health, data.maxHealth);
-                op.SendInfoMessage("魔力：{0}/{1}", data.mana, data.maxMana);
-                op.SendInfoMessage("渔夫任务完成数：{0} 次", data.questsCompleted);
-                Compatible.ShowDataUnlockedBiomeTorches(op, data);
-                op.SendInfoMessage("额外饰品栏：{0}", data.extraSlot == 1 ? "已激活" : "未激活");
+                op.SendInfoMessage("[i:267]玩家：{0}（已离线）", username);
+                op.SendInfoMessage("[i:29]生命：{0}/{1}", data.health, data.maxHealth);
+                op.SendInfoMessage("[i:109]魔力：{0}/{1}", data.mana, data.maxMana);
+                op.SendInfoMessage("[i:2294]渔夫：{0} 次任务", data.questsCompleted);
+
+                string text = $"[i:3335]增强：" +
+                    $"{Util.CFlag(data.extraSlot == 1, "[i:3335]恶魔之心")}, " +
+                    $"{Util.CFlag(data.unlockedBiomeTorches == 1, "[i:5043]火把神徽章")}";
+                op.SendInfoMessage(text);
 
                 // accessories
                 // misc
@@ -261,18 +267,18 @@ namespace Plugin
                     }
                 }
 
-                if (inventory.Count != 0) SendMultipleMessage(op, "●背包：", inventory);
-                if (assist.Count != 0) SendMultipleMessage(op, "●钱币、弹药：", assist);
-                if (trash.Count != 0) SendMultipleMessage(op, "●垃圾桶：", trash);
-                if (armor.Count != 0) SendMultipleMessage(op, "●装备栏：", armor);
-                if (vanity.Count != 0) SendMultipleMessage(op, "●社交栏：", vanity);
-                if (dye.Count != 0) SendMultipleMessage(op, "●染料1：", dye);
-                if (miscEquips.Count != 0) SendMultipleMessage(op, "●工具栏：", miscEquips);
-                if (miscDyes.Count != 0) SendMultipleMessage(op, "●染料2：", miscDyes);
-                if (bank.Count != 0) SendMultipleMessage(op, "●储蓄罐：", bank);
-                if (bank2.Count != 0) SendMultipleMessage(op, "●保险箱：", bank2);
-                if (bank3.Count != 0) SendMultipleMessage(op, "●护卫熔炉：", bank3);
-                if (bank4.Count != 0) SendMultipleMessage(op, "●虚空保险箱：", bank4);
+                if (inventory.Count != 0) SendMultipleMessage(op, "[i:5343]背包：", inventory);
+                if (trash.Count != 0) SendMultipleMessage(op, "[i:2339]垃圾桶：", trash);
+                if (assist.Count != 0) SendMultipleMessage(op, "[i:3104]钱弹：", assist);
+                if (armor.Count != 0) SendMultipleMessage(op, "[i:3097]装备栏：", armor);
+                if (vanity.Count != 0) SendMultipleMessage(op, "[i:4559]社交栏：", vanity);
+                if (dye.Count != 0) SendMultipleMessage(op, "[i:1066]染料1：", dye);
+                if (miscEquips.Count != 0) SendMultipleMessage(op, "[i:84]工具栏：", miscEquips);
+                if (miscDyes.Count != 0) SendMultipleMessage(op, "[i:1066]染料2：", miscDyes);
+                if (bank.Count != 0) SendMultipleMessage(op, "[i:87]储蓄罐：", bank);
+                if (bank2.Count != 0) SendMultipleMessage(op, "[i:346]保险箱：", bank2);
+                if (bank3.Count != 0) SendMultipleMessage(op, "[i:3813]护卫熔炉：", bank3);
+                if (bank4.Count != 0) SendMultipleMessage(op, "[i:4131]虚空保险箱：", bank4);
 
             }
             else
@@ -286,7 +292,7 @@ namespace Plugin
         {
             if (netItem.NetId == 0) return "";
 
-            if( ChatItemIsIcon)
+            if (ChatItemIsIcon)
             {
                 // https://terraria.fandom.com/wiki/Chat
                 // [i:29]   数量
@@ -449,8 +455,8 @@ namespace Plugin
             }
 
             if (inventory.Count != 0) SendMultipleMessage(op, "●背包：", inventory);
-            if (assist.Count != 0) SendMultipleMessage(op, "●钱币、弹药：", assist);
             if (trash.Count != 0) SendMultipleMessage(op, "●垃圾桶：", trash);
+            if (assist.Count != 0) SendMultipleMessage(op, "●钱弹：", assist);
             if (armor.Count != 0) SendMultipleMessage(op, "●装备栏：", armor);
             if (vanity.Count != 0) SendMultipleMessage(op, "●社交栏：", vanity);
             if (dye.Count != 0) SendMultipleMessage(op, "●染料1：", dye);

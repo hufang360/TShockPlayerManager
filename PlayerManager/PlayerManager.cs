@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Terraria;
@@ -35,9 +34,8 @@ namespace Plugin
                     c.Names.Remove("pm");
             }
 
-            Commands.ChatCommands.Add(new Command(new List<string>() { "playermanager" }, PlayerManager, "playermanager", "pm", "ppm") { HelpText = "玩家管理" });
-            Commands.ChatCommands.Add(new Command(new List<string>() { "lookbag" }, LookBag, "lookbag", "lb") { HelpText = "查看背包" });
-
+            Commands.ChatCommands.Add(new Command("playermanager", PlayerManager, "playermanager", "pm", "ppm") { HelpText = "玩家管理" });
+            Commands.ChatCommands.Add(new Command("lookbag", LookBag, "lookbag", "lb") { HelpText = "查看背包" });
 
             //Snapshot.load();
             //Commands.ChatCommands.Add(new Command(new List<string>() { "bagsnapshot" }, Snapshot.BagSnapshot, "bagsnapshot", "bs") { HelpText = "背包快照管理" });
@@ -45,8 +43,13 @@ namespace Plugin
             //Commands.ChatCommands.Add(new Command(new List<string>() { "lookmybag" }, Snapshot.LookMyBag, "lookmybag", "lmb") { HelpText = "查看背包快照" });
         }
 
+
+
         protected override void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+            }
             base.Dispose(disposing);
         }
         #endregion

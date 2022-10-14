@@ -369,7 +369,7 @@ namespace Plugin
                 player.difficulty = (byte)Main.GameModeInfo.Id;
 
                 // 火把神
-                Compatible.ModifyDataBiomeTorches(player, data);
+                player.unlockedBiomeTorches = data.unlockedBiomeTorches == 1;
 
                 player.hairColor = data.hairColor ?? default;
                 player.skinColor = data.skinColor ?? default;
