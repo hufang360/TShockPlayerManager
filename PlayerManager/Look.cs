@@ -32,18 +32,38 @@ namespace Plugin
                 ShowDBPlayer(args.Player, found.Name, found.ID);
         }
 
-        private static void ShowPlayer(TSPlayer op, Player plr)
+        /// <summary>
+        /// 查看玩家信息（在线）
+        /// </summary>
+        static void ShowPlayer(TSPlayer op, Player plr)
         {
-            op.SendInfoMessage("[i:267]玩家：{0}", plr.name);
-            op.SendInfoMessage("[i:29]生命：{0}/{1}", plr.statLife, plr.statLifeMax);
-            op.SendInfoMessage("[i:109]魔力：{0}/{1}", plr.statMana, plr.statManaMax);
-            op.SendInfoMessage("[i:2294]渔夫：{0} 次任务", plr.anglerQuestsFinished);
+            op.SendInfoMessage("玩家：{0}", plr.name);
+            op.SendInfoMessage("生命：{0}/{1}", plr.statLife, plr.statLifeMax);
+            op.SendInfoMessage("魔力：{0}/{1}", plr.statMana, plr.statManaMax);
+            if (plr.anglerQuestsFinished > 0) op.SendInfoMessage("渔夫任务：{0} 次", plr.anglerQuestsFinished);
+            //if (plr.numberOfDeathsPVE > 0 || plr.numberOfDeathsPVP > 0)
+            //{
+            //    string[] f = new string[] {
+            //        plr.numberOfDeathsPVE > 0 ? $"被杀死了{plr.numberOfDeathsPVE}次" : "",
+            //        plr.numberOfDeathsPVP > 0 ? $"被其它玩家杀死了{plr.numberOfDeathsPVP}次" : "",
+            //    };
+            //    op.SendInfoMessage($"死亡统计：{string.Join(", ", f)}");
+            //}
 
-            string text = $"[i:3335]增强：" +
-                $"{Util.CFlag(plr.extraAccessory, "[i:3335]恶魔之心")}, " +
-                $"{Util.CFlag(plr.UsingBiomeTorches, "[i:5043]火把神徽章")}";
-            op.SendInfoMessage(text);
+            List<string> enhance = new List<string>();
+            if (plr.extraAccessory) enhance.Add("[i:3335]"); // 3335 恶魔之心
+            if (plr.UsingBiomeTorches) enhance.Add("[i:5043]"); // 5043 火把神徽章
+            if (plr.ateArtisanBread) enhance.Add("[i:5326]"); // 5326	工匠面包
+            if (plr.usedAegisCrystal) enhance.Add("[i:5337]");    // 5337 生命水晶	永久强化生命再生 
+            if (plr.usedAegisFruit) enhance.Add("[i:5338]");  // 5338 埃癸斯果	永久提高防御力 
+            if (plr.usedArcaneCrystal) enhance.Add("[i:5339]"); // 5339 奥术水晶	永久提高魔力再生 
+            if (plr.usedGalaxyPearl) enhance.Add("[i:5340]"); // 5340	银河珍珠	永久增加运气 
+            if (plr.usedGummyWorm) enhance.Add("[i:5341]"); // 5341	黏性蠕虫	永久提高钓鱼技能  
+            if (plr.usedAmbrosia) enhance.Add("[i:5342]"); // 5342	珍馐	 永久提高采矿和建造速度 
+            if (plr.unlockedSuperCart) enhance.Add("[i:5289]"); // 5289	矿车升级包
+            if (enhance.Count != 0) SendMultipleMessage(op, "永久增强：", enhance);
 
+            #region 读取格子数据
             // accessories
             // misc
             List<string> inventory = new List<string>();
@@ -57,6 +77,15 @@ namespace Plugin
             List<string> bank2 = new List<string>();
             List<string> bank3 = new List<string>();
             List<string> bank4 = new List<string>();
+            List<string> armor1 = new List<string>();
+            List<string> armor2 = new List<string>();
+            List<string> armor3 = new List<string>();
+            List<string> vanity1 = new List<string>();
+            List<string> vanity2 = new List<string>();
+            List<string> vanity3 = new List<string>();
+            List<string> dye1 = new List<string>();
+            List<string> dye2 = new List<string>();
+            List<string> dye3 = new List<string>();
 
             string s;
             for (int i = 0; i < 59; i++)
@@ -126,24 +155,92 @@ namespace Plugin
                 if (s != "") bank4.Add(s);
             }
 
-            List<String> trash = new List<string>();
+            // 装备（loadout）
+            for (int i = 0; i < plr.Loadouts.Length; i++)
+            {
+                Item[] items = plr.Loadouts[i].Armor;
+                // 装备 和 时装
+                for (int j = 0; j < items.Length; j++)
+                {
+                    s = GetItemDesc(items[j]);
+                    if (!string.IsNullOrEmpty(s))
+                    {
+                        if (i == 0)
+                        {
+                            if (j < 10)
+                                armor1.Add(s);
+                            else
+                                vanity1.Add(s);
+                        }
+                        else if (i == 1)
+                        {
+                            if (j < 10)
+                                armor2.Add(s);
+                            else
+                                vanity2.Add(s);
+                        }
+                        else if (i == 2)
+                        {
+                            if (j < 10)
+                                armor3.Add(s);
+                            else
+                                vanity3.Add(s);
+                        }
+                    }
+                }
+
+                // 染料
+                items = plr.Loadouts[i].Dye;
+                for (int j = 0; j < items.Length; j++)
+                {
+                    s = GetItemDesc(items[j]);
+                    if (!string.IsNullOrEmpty(s))
+                    {
+                        if (i == 0) dye1.Add(s);
+                        else if (i == 1) dye2.Add(s);
+                        else if (i == 2) dye3.Add(s);
+                    }
+                }
+            }
+            #endregion
+
+            List<string> trash = new List<string>();
             s = GetItemDesc(plr.trashItem);
             if (s != "") trash.Add(s);
 
-            if (inventory.Count != 0) SendMultipleMessage(op, "[i:5343]背包：", inventory);
-            if (trash.Count != 0) SendMultipleMessage(op, "[i:2339]垃圾桶：", trash);
-            if (assist.Count != 0) SendMultipleMessage(op, "[i:3104]钱弹：", assist);
-            if (armor.Count != 0) SendMultipleMessage(op, "[i:3097]装备栏：", armor);
-            if (vanity.Count != 0) SendMultipleMessage(op, "[i:4559]社交栏：", vanity);
-            if (dye.Count != 0) SendMultipleMessage(op, "[i:1066]染料1：", dye);
-            if (miscEquips.Count != 0) SendMultipleMessage(op, "[i:84]工具栏：", miscEquips);
-            if (miscDyes.Count != 0) SendMultipleMessage(op, "[i:1066]染料2：", miscDyes);
-            if (bank.Count != 0) SendMultipleMessage(op, "[i:87]储蓄罐：", bank);
-            if (bank2.Count != 0) SendMultipleMessage(op, "[i:346]保险箱：", bank2);
-            if (bank3.Count != 0) SendMultipleMessage(op, "[i:3813]护卫熔炉：", bank3);
-            if (bank4.Count != 0) SendMultipleMessage(op, "[i:4131]虚空保险箱：", bank4);
+            if (inventory.Count != 0) SendMultipleMessage(op, "背包：", inventory);
+            if (trash.Count != 0) SendMultipleMessage(op, "垃圾桶：", trash);
+            if (assist.Count != 0) SendMultipleMessage(op, "钱弹：", assist);
+
+            int num = plr.CurrentLoadoutIndex + 1;
+            if (armor.Count != 0) SendMultipleMessage(op, $">装备{num}：", armor);
+            if (vanity.Count != 0) SendMultipleMessage(op, $">时装{num}：", vanity);
+            if (dye.Count != 0) SendMultipleMessage(op, $">染料{num}：", dye);
+
+            if (armor1.Count != 0) SendMultipleMessage(op, "装备1：", armor1);
+            if (vanity1.Count != 0) SendMultipleMessage(op, "时装1：", vanity1);
+            if (dye1.Count != 0) SendMultipleMessage(op, "染料1：", dye1);
+
+            if (armor2.Count != 0) SendMultipleMessage(op, "装备2：", armor2);
+            if (vanity2.Count != 0) SendMultipleMessage(op, "时装2：", vanity2);
+            if (dye2.Count != 0) SendMultipleMessage(op, "染料2：", dye2);
+
+            if (armor3.Count != 0) SendMultipleMessage(op, "装备3：", armor3);
+            if (vanity3.Count != 0) SendMultipleMessage(op, "时装3：", vanity3);
+            if (dye3.Count != 0) SendMultipleMessage(op, "染料3：", dye3);
+
+            if (miscEquips.Count != 0) SendMultipleMessage(op, "工具栏：", miscEquips);
+            if (miscDyes.Count != 0) SendMultipleMessage(op, "工具栏染料：", miscDyes);
+            if (bank.Count != 0) SendMultipleMessage(op, "储蓄罐：", bank);
+            if (bank2.Count != 0) SendMultipleMessage(op, "保险箱：", bank2);
+            if (bank3.Count != 0) SendMultipleMessage(op, "护卫熔炉：", bank3);
+            if (bank4.Count != 0) SendMultipleMessage(op, "虚空保险箱：", bank4);
+            op.SendInfoMessage("*游戏内按↑↓键可滚动查看");
         }
 
+        /// <summary>
+        /// 获得物品描述
+        /// </summary>
         private static string GetItemDesc(Item item)
         {
             if (item.netID == 0)
@@ -177,7 +274,10 @@ namespace Plugin
         }
 
 
-        private static void ShowDBPlayer(TSPlayer op, String username, int userid)
+        /// <summary>
+        /// 查看玩家信息（离线）
+        /// </summary>
+        static void ShowDBPlayer(TSPlayer op, String username, int userid)
         {
             var name = username;
             var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), userid);
@@ -188,16 +288,34 @@ namespace Plugin
                 //     args.Player.SendErrorMessage($"玩家 {name} 的数据不完整, 无法查看.");
                 //     return;
                 // }
-                op.SendInfoMessage("[i:267]玩家：{0}（已离线）", username);
-                op.SendInfoMessage("[i:29]生命：{0}/{1}", data.health, data.maxHealth);
-                op.SendInfoMessage("[i:109]魔力：{0}/{1}", data.mana, data.maxMana);
-                op.SendInfoMessage("[i:2294]渔夫：{0} 次任务", data.questsCompleted);
+                op.SendInfoMessage("玩家：{0}（已离线）", username);
+                op.SendInfoMessage("生命：{0}/{1}", data.health, data.maxHealth);
+                op.SendInfoMessage("魔力：{0}/{1}", data.mana, data.maxMana);
 
-                string text = $"[i:3335]增强：" +
-                    $"{Util.CFlag(data.extraSlot == 1, "[i:3335]恶魔之心")}, " +
-                    $"{Util.CFlag(data.unlockedBiomeTorches == 1, "[i:5043]火把神徽章")}";
-                op.SendInfoMessage(text);
+                if (data.questsCompleted > 0) op.SendInfoMessage("渔夫任务：{0} 次", data.questsCompleted);
+                //if (data.numberOfDeathsPVE > 0 || data.numberOfDeathsPVP > 0)
+                //{
+                //    string[] f = new string[] {
+                //        data.numberOfDeathsPVE > 0 ? $"被杀死了{data.numberOfDeathsPVE}次" : "",
+                //        data.numberOfDeathsPVP > 0 ? $"被其它玩家杀死了{data.numberOfDeathsPVP}次" : "",
+                //    };
+                //    op.SendInfoMessage($"死亡统计：{string.Join(", ", f)}");
+                //}
 
+                List<string> enhance = new List<string>();
+                if (data.extraSlot == 1) enhance.Add("[i:3335]"); // 3335 恶魔之心
+                if (data.unlockedBiomeTorches == 1) enhance.Add("[i:5043]"); // 5043 火把神徽章
+                if (data.ateArtisanBread == 1) enhance.Add("[i:5326]"); // 5326	工匠面包
+                if (data.usedAegisCrystal == 1) enhance.Add("[i:5337]");    // 5337 生命水晶	永久强化生命再生 
+                if (data.usedAegisFruit == 1) enhance.Add("[i:5338]");  // 5338 埃癸斯果	永久提高防御力 
+                if (data.usedArcaneCrystal == 1) enhance.Add("[i:5339]"); // 5339 奥术水晶	永久提高魔力再生 
+                if (data.usedGalaxyPearl == 1) enhance.Add("[i:5340]"); // 5340	银河珍珠	永久增加运气 
+                if (data.usedGummyWorm == 1) enhance.Add("[i:5341]"); // 5341	黏性蠕虫	永久提高钓鱼技能  
+                if (data.usedAmbrosia == 1) enhance.Add("[i:5342]"); // 5342	珍馐	永久提高采矿和建造速度 
+                if (data.unlockedSuperCart == 1) enhance.Add("[i:5289]"); // 5289	矿车升级包
+                if (enhance.Count != 0) SendMultipleMessage(op, "永久增强：", enhance);
+
+                #region 读取格子
                 // accessories
                 // misc
                 List<string> inventory = new List<string>();
@@ -213,8 +331,18 @@ namespace Plugin
                 List<string> bank4 = new List<string>();
                 List<string> trash = new List<string>();
 
-                String s;
-                for (int i = 0; i < 260; i++)
+                List<string> armor1 = new List<string>();
+                List<string> armor2 = new List<string>();
+                List<string> armor3 = new List<string>();
+                List<string> vanity1 = new List<string>();
+                List<string> vanity2 = new List<string>();
+                List<string> vanity3 = new List<string>();
+                List<string> dye1 = new List<string>();
+                List<string> dye2 = new List<string>();
+                List<string> dye3 = new List<string>();
+
+                string s;
+                for (int i = 0; i < NetItem.MaxInventory; i++)
                 {
                     s = GetNetItemDesc(data.inventory[i]);
                     if (i < 50)
@@ -253,6 +381,10 @@ namespace Plugin
                     {
                         if (s != "") bank2.Add(s);
                     }
+                    else if (i == 179)
+                    {
+                        if (s != "") trash.Add(s);
+                    }
                     else if (i >= 180 && i < 220)
                     {
                         if (s != "") bank3.Add(s);
@@ -261,25 +393,80 @@ namespace Plugin
                     {
                         if (s != "") bank4.Add(s);
                     }
-                    else if (i == 179)
+
+                    // loadout
+                    else if (i >= 260 && i < 270)
                     {
-                        if (s != "") trash.Add(s);
+                        if (s != "") armor1.Add(s);
                     }
+                    else if (i >= 270 && i < 280)
+                    {
+                        if (s != "") vanity1.Add(s);
+                    }
+                    else if (i >= 280 && i < 290)
+                    {
+                        if (s != "") dye1.Add(s);
+                    }
+
+
+                    else if (i >= 290 && i < 300)
+                    {
+                        if (s != "") armor2.Add(s);
+                    }
+                    else if (i >= 300 && i < 310)
+                    {
+                        if (s != "") vanity2.Add(s);
+                    }
+                    else if (i >= 310 && i < 320)
+                    {
+                        if (s != "") dye2.Add(s);
+                    }
+
+                    else if (i >= 320 && i < 330)
+                    {
+                        if (s != "") armor3.Add(s);
+                    }
+                    else if (i >= 330 && i < 340)
+                    {
+                        if (s != "") vanity3.Add(s);
+                    }
+                    else if (i >= 340 && i < 350)
+                    {
+                        if (s != "") dye3.Add(s);
+                    }
+
                 }
+                #endregion
 
-                if (inventory.Count != 0) SendMultipleMessage(op, "[i:5343]背包：", inventory);
-                if (trash.Count != 0) SendMultipleMessage(op, "[i:2339]垃圾桶：", trash);
-                if (assist.Count != 0) SendMultipleMessage(op, "[i:3104]钱弹：", assist);
-                if (armor.Count != 0) SendMultipleMessage(op, "[i:3097]装备栏：", armor);
-                if (vanity.Count != 0) SendMultipleMessage(op, "[i:4559]社交栏：", vanity);
-                if (dye.Count != 0) SendMultipleMessage(op, "[i:1066]染料1：", dye);
-                if (miscEquips.Count != 0) SendMultipleMessage(op, "[i:84]工具栏：", miscEquips);
-                if (miscDyes.Count != 0) SendMultipleMessage(op, "[i:1066]染料2：", miscDyes);
-                if (bank.Count != 0) SendMultipleMessage(op, "[i:87]储蓄罐：", bank);
-                if (bank2.Count != 0) SendMultipleMessage(op, "[i:346]保险箱：", bank2);
-                if (bank3.Count != 0) SendMultipleMessage(op, "[i:3813]护卫熔炉：", bank3);
-                if (bank4.Count != 0) SendMultipleMessage(op, "[i:4131]虚空保险箱：", bank4);
+                if (inventory.Count != 0) SendMultipleMessage(op, "背包：", inventory);
+                if (trash.Count != 0) SendMultipleMessage(op, "垃圾桶：", trash);
+                if (assist.Count != 0) SendMultipleMessage(op, "钱币弹药：", assist);
 
+
+                int num = data.currentLoadoutIndex + 1;
+                if (armor.Count != 0) SendMultipleMessage(op, $">装备{num}：", armor);
+                if (vanity.Count != 0) SendMultipleMessage(op, $">时装{num}：", vanity);
+                if (dye.Count != 0) SendMultipleMessage(op, $">染料{num}：", dye);
+
+                if (armor1.Count != 0) SendMultipleMessage(op, "装备1：", armor1);
+                if (vanity1.Count != 0) SendMultipleMessage(op, "时装1：", vanity1);
+                if (dye1.Count != 0) SendMultipleMessage(op, "染料1：", dye1);
+
+                if (armor2.Count != 0) SendMultipleMessage(op, "装备2：", armor2);
+                if (vanity2.Count != 0) SendMultipleMessage(op, "时装2：", vanity2);
+                if (dye2.Count != 0) SendMultipleMessage(op, "染料2：", dye2);
+
+                if (armor3.Count != 0) SendMultipleMessage(op, "装备3：", armor3);
+                if (vanity3.Count != 0) SendMultipleMessage(op, "时装3：", vanity3);
+                if (dye3.Count != 0) SendMultipleMessage(op, "染料3：", dye3);
+
+                if (miscEquips.Count != 0) SendMultipleMessage(op, "工具栏：", miscEquips);
+                if (miscDyes.Count != 0) SendMultipleMessage(op, "染料2：", miscDyes);
+                if (bank.Count != 0) SendMultipleMessage(op, "储蓄罐：", bank);
+                if (bank2.Count != 0) SendMultipleMessage(op, "保险箱：", bank2);
+                if (bank3.Count != 0) SendMultipleMessage(op, "护卫熔炉：", bank3);
+                if (bank4.Count != 0) SendMultipleMessage(op, "虚空保险箱：", bank4);
+                op.SendInfoMessage("*游戏内按↑↓键可滚动查看");
             }
             else
             {
@@ -341,14 +528,15 @@ namespace Plugin
         public static void SendMultipleMessage(TSPlayer op, string header, List<string> matches)
         {
             // if( ChatItemIsIcon ){
-            if (matches.Count <= 10)
-            {
-                matches[0] = header + matches[0];
-            }
-            else
-            {
-                op.SendInfoMessage(header);
-            }
+            //if (matches.Count <= 10)
+            //{
+            //    matches[0] = header + matches[0];
+            //}
+            //else
+            //{
+            //    op.SendInfoMessage(header);
+            //}
+            matches[0] = header + matches[0];
             // 一行显示10个物品
             var s = "";
             var count = 0;

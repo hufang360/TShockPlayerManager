@@ -44,9 +44,9 @@ namespace Plugin
                 else if (list.Any())
                 {
                     if (ExportOne(list[0].TPlayer, path).Result)
-                        op.SendSuccessMessage($"已导出玩家 {list[0].Name} 的存档至 {path}.");
+                        op.SendSuccessMessage($"已导出玩家 {list[0].Name} .（{path}）");
                     else
-                        op.SendErrorMessage($"导出失败.");
+                        op.SendErrorMessage("导出失败.");
 
                 }
                 else
@@ -70,14 +70,14 @@ namespace Plugin
                                 return;
                             }
                             if (ExportOne(ModifyData(name, data), path).Result)
-                                op.SendSuccessMessage($"已导出玩家 {name} 的存档至 {path}.");
+                                op.SendSuccessMessage($"已导出玩家 {name} .（{path}）");
                             else
-                                op.SendErrorMessage($"导出失败.");
+                                op.SendErrorMessage("导出失败.");
 
                         }
                         else
                         {
-                            op.SendErrorMessage($"未能从数据库中获取到玩家数据.");
+                            op.SendErrorMessage("未能从数据库中获取到玩家数据.");
                         }
 
                     }
@@ -143,7 +143,7 @@ namespace Plugin
                         }
                     }
                 });
-                op.SendInfoMessage($"操作完成. 成功: {successcount}, 失败: {faildcount}.");
+                op.SendInfoMessage($"操作完成. 成功: {successcount}, 失败: {faildcount}. \n导出位置：{plr_dir}");
 
             });
         }
@@ -155,10 +155,13 @@ namespace Plugin
             {
                 try
                 {
-                    RijndaelManaged rijndaelManaged = new RijndaelManaged();
+                    // Player.cs Serialize();
+                    //RijndaelManaged rijndaelManaged = new RijndaelManaged();
+                    //using (CryptoStream cryptoStream = new CryptoStream(stream, rijndaelManaged.CreateEncryptor(Player.ENCRYPTION_KEY, Player.ENCRYPTION_KEY), CryptoStreamMode.Write))
+                    Aes myAes = Aes.Create();
                     using (Stream stream = new FileStream(path, FileMode.Create))
                     {
-                        using (CryptoStream cryptoStream = new CryptoStream(stream, rijndaelManaged.CreateEncryptor(Player.ENCRYPTION_KEY, Player.ENCRYPTION_KEY), CryptoStreamMode.Write))
+                        using (CryptoStream cryptoStream = new CryptoStream(stream, myAes.CreateEncryptor(Player.ENCRYPTION_KEY, Player.ENCRYPTION_KEY), CryptoStreamMode.Write))
                         {
                             PlayerFileData playerFileData = new PlayerFileData
                             {
@@ -170,7 +173,9 @@ namespace Plugin
                             Main.LocalFavoriteData.ClearEntry(playerFileData);
                             using (BinaryWriter binaryWriter = new BinaryWriter(cryptoStream))
                             {
-                                binaryWriter.Write(230);
+                                //230 1.4.0.5
+                                //269 1.4.4.0
+                                binaryWriter.Write(269);
                                 playerFileData.Metadata.Write(binaryWriter);
                                 binaryWriter.Write(player.name);
                                 binaryWriter.Write(player.difficulty);
@@ -198,8 +203,21 @@ namespace Plugin
                                 binaryWriter.Write(player.extraAccessory);
                                 binaryWriter.Write(player.unlockedBiomeTorches);
                                 binaryWriter.Write(player.UsingBiomeTorches);
+
+                                binaryWriter.Write(player.ateArtisanBread);
+                                binaryWriter.Write(player.usedAegisCrystal);
+                                binaryWriter.Write(player.usedAegisFruit);
+                                binaryWriter.Write(player.usedArcaneCrystal);
+                                binaryWriter.Write(player.usedGalaxyPearl);
+                                binaryWriter.Write(player.usedGummyWorm);
+                                binaryWriter.Write(player.usedAmbrosia);
+
                                 binaryWriter.Write(player.downedDD2EventAnyDifficulty);
                                 binaryWriter.Write(player.taxMoney);
+
+                                binaryWriter.Write(player.numberOfDeathsPVE);
+                                binaryWriter.Write(player.numberOfDeathsPVP);
+
                                 binaryWriter.Write(player.hairColor.R);
                                 binaryWriter.Write(player.hairColor.G);
                                 binaryWriter.Write(player.hairColor.B);
@@ -268,9 +286,10 @@ namespace Plugin
                                     binaryWriter.Write(player.bank4.item[num4].netID);
                                     binaryWriter.Write(player.bank4.item[num4].stack);
                                     binaryWriter.Write(player.bank4.item[num4].prefix);
+                                    binaryWriter.Write(player.bank4.item[num4].favorited);
                                 }
                                 binaryWriter.Write(player.voidVaultInfo);
-                                for (int num5 = 0; num5 < 22; num5++)
+                                for (int num5 = 0; num5 < 44; num5++)
                                 {
                                     if (Main.buffNoSave[player.buffType[num5]])
                                     {
@@ -319,9 +338,18 @@ namespace Plugin
                                 binaryWriter.Write(value);
                                 binaryWriter.Write(player.golferScoreAccumulated);
                                 SaveSacrifice(binaryWriter);
-                                // player.creativeTracker.Save(binaryWriter);
                                 player.SaveTemporaryItemSlotContents(binaryWriter);
                                 CreativePowerManager.Instance.SaveToPlayer(player, binaryWriter);
+                                BitsByte bitsByte2 = default(BitsByte);
+                                bitsByte2[0] = player.unlockedSuperCart;
+                                bitsByte2[1] = player.enabledSuperCart;
+                                binaryWriter.Write(bitsByte2);
+                                binaryWriter.Write(player.CurrentLoadoutIndex);
+                                for (int num10 = 0; num10 < player.Loadouts.Length; num10++)
+                                {
+                                    player.Loadouts[num10].Serialize(binaryWriter);
+                                }
+
                                 binaryWriter.Flush();
                                 cryptoStream.FlushFinalBlock();
                                 stream.Flush();
@@ -336,9 +364,13 @@ namespace Plugin
             });
         }
 
+        /// <summary>
+        /// 导出物品研究
+        /// </summary>
+        /// <param name="writer"></param>
         public static void SaveSacrifice(BinaryWriter writer)
         {
-
+            //player.creativeTracker.Save(binaryWriter);
             Dictionary<int, int> dictionary = TShock.ResearchDatastore.GetSacrificedItems();
             writer.Write(dictionary.Count);
             foreach (KeyValuePair<int, int> item in dictionary)
@@ -348,7 +380,12 @@ namespace Plugin
             }
         }
 
-
+        /// <summary>
+        /// data 转 玩家
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
         private static Player ModifyData(string name, PlayerData data)
         {
             Player player = new Player();
@@ -383,8 +420,13 @@ namespace Plugin
                 player.hairDye = data.hairDye;
 
                 player.anglerQuestsFinished = data.questsCompleted;
+                player.CurrentLoadoutIndex = data.currentLoadoutIndex;
 
-                for (int i = 0; i < 260; i++)
+                //player.numberOfDeathsPVE = data.numberOfDeathsPVE;
+                //player.numberOfDeathsPVP = data.numberOfDeathsPVP;
+
+
+                for (int i = 0; i < NetItem.MaxInventory; i++)
                 {
                     //  0~49 背包   5*10
                     //  50、51、52、53 钱
@@ -399,6 +441,7 @@ namespace Plugin
                     // 179 垃圾桶
                     // 180~219 护卫熔炉
                     // 220~259 虚空保险箱
+                    // 260~350 装备123
                     if (i < 59) player.inventory[i] = NetItem2Item(data.inventory[i]);
                     else if (i >= 59 && i < 79) player.armor[i - 59] = NetItem2Item(data.inventory[i]);
                     else if (i >= 79 && i < 89) player.dye[i - 79] = NetItem2Item(data.inventory[i]);
@@ -409,6 +452,15 @@ namespace Plugin
                     else if (i == 179) player.trashItem = NetItem2Item(data.inventory[i]);
                     else if (i >= 180 && i < 220) player.bank3.item[i - 180] = NetItem2Item(data.inventory[i]);
                     else if (i >= 220 && i < 260) player.bank4.item[i - 220] = NetItem2Item(data.inventory[i]);
+
+                    else if (i >= 260 && i < 280) player.Loadouts[0].Armor[i - 260] = NetItem2Item(data.inventory[i]);
+                    else if (i >= 280 && i < 290) player.Loadouts[0].Dye[i - 280] = NetItem2Item(data.inventory[i]);
+
+                    else if (i >= 290 && i < 310) player.Loadouts[1].Armor[i - 290] = NetItem2Item(data.inventory[i]);
+                    else if (i >= 310 && i < 320) player.Loadouts[1].Dye[i - 310] = NetItem2Item(data.inventory[i]);
+
+                    else if (i >= 320 && i < 340) player.Loadouts[2].Armor[i - 320] = NetItem2Item(data.inventory[i]);
+                    else if (i >= 340 && i < 350) player.Loadouts[2].Dye[i - 340] = NetItem2Item(data.inventory[i]);
                 }
             }
             return player;

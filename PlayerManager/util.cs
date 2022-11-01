@@ -88,7 +88,7 @@ namespace Plugin
 			return account;
 		}
 
-        public static string CFlag(bool foo, string fstr) { return foo ? $"[c/96FF96:✔{fstr}]" : $"-{fstr}"; }
+        public static string CFlag(bool foo, string fstr) { return foo ? $"[c/96FF96:✔]{fstr}" : $"-{fstr}"; }
         public static string CFlag(string fstr, bool foo) { return foo ? $"{fstr}✓" : $"{fstr}-"; }
 
         public static void Log(string msg) { TShock.Log.ConsoleInfo("[pm]" + msg); }
