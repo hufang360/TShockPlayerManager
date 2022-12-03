@@ -3,18 +3,44 @@ using System.Collections.Generic;
 using Terraria;
 using TShockAPI;
 
-namespace Plugin
+namespace PlayerManager
 {
     public class Look
     {
-        private static bool ChatItemIsIcon;
-        public static void LookPlayer(CommandArgs args, string name)
+        #region 查看玩家背包
+        public static void LookBag(CommandArgs args)
         {
-            if (name == "")
+            if (args.Parameters.Count == 0 && !args.Player.RealPlayer)
+                args.Player.SendErrorMessage("请输入玩家名，/lookbag <玩家名>");
+            else
+                LookPlayer(args);
+        }
+        #endregion
+
+
+
+        private static bool ChatItemIsIcon;
+        public static void LookPlayer(CommandArgs args)
+        {
+            string name;
+
+            if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("输入要查看的玩家名");
-                return;
+                if (!args.Player.RealPlayer)
+                {
+                    args.Player.SendErrorMessage("请输入玩家名，/pm look <玩家名>");
+                    return;
+                }
+                else
+                {
+                    name = args.Player.Name;
+                }
             }
+            else
+            {
+                name = string.Join("", args.Parameters);
+            }
+
 
             // 控制台显示 物品名称
             // 4.4.0 -1.4.1.2   [i:4444]
@@ -22,9 +48,13 @@ namespace Plugin
             ChatItemIsIcon = TShock.VersionNum.CompareTo(new Version(4, 5, 0, 0)) >= 0;
             //Console.WriteLine($"ChatItemIsIcon:");
 
-            FoundPlayer found = Util.GetPlayer(args.Player, name);
+
+            FoundPlayer found = Utils.GetPlayer(name, out string errMsg);
             if (!found.valid)
+            {
+                args.Player.SendErrorMessage(errMsg);
                 return;
+            }
 
             if (found.online)
                 ShowPlayer(args.Player, found.plr.TPlayer);
@@ -50,9 +80,9 @@ namespace Plugin
             //    op.SendInfoMessage($"死亡统计：{string.Join(", ", f)}");
             //}
 
-            List<string> enhance = new List<string>();
+            List<string> enhance = new();
             if (plr.extraAccessory) enhance.Add("[i:3335]"); // 3335 恶魔之心
-            if (plr.UsingBiomeTorches) enhance.Add("[i:5043]"); // 5043 火把神徽章
+            if (plr.unlockedBiomeTorches) enhance.Add("[i:5043]"); // 5043 火把神徽章
             if (plr.ateArtisanBread) enhance.Add("[i:5326]"); // 5326	工匠面包
             if (plr.usedAegisCrystal) enhance.Add("[i:5337]");    // 5337 生命水晶	永久强化生命再生 
             if (plr.usedAegisFruit) enhance.Add("[i:5338]");  // 5338 埃癸斯果	永久提高防御力 
@@ -66,26 +96,26 @@ namespace Plugin
             #region 读取格子数据
             // accessories
             // misc
-            List<string> inventory = new List<string>();
-            List<string> assist = new List<string>();
-            List<string> armor = new List<string>();
-            List<string> vanity = new List<string>();
-            List<string> dye = new List<string>();
-            List<string> miscEquips = new List<string>();
-            List<string> miscDyes = new List<string>();
-            List<string> bank = new List<string>();
-            List<string> bank2 = new List<string>();
-            List<string> bank3 = new List<string>();
-            List<string> bank4 = new List<string>();
-            List<string> armor1 = new List<string>();
-            List<string> armor2 = new List<string>();
-            List<string> armor3 = new List<string>();
-            List<string> vanity1 = new List<string>();
-            List<string> vanity2 = new List<string>();
-            List<string> vanity3 = new List<string>();
-            List<string> dye1 = new List<string>();
-            List<string> dye2 = new List<string>();
-            List<string> dye3 = new List<string>();
+            List<string> inventory = new();
+            List<string> assist = new();
+            List<string> armor = new();
+            List<string> vanity = new();
+            List<string> dye = new();
+            List<string> miscEquips = new();
+            List<string> miscDyes = new();
+            List<string> bank = new();
+            List<string> bank2 = new();
+            List<string> bank3 = new();
+            List<string> bank4 = new();
+            List<string> armor1 = new();
+            List<string> armor2 = new();
+            List<string> armor3 = new();
+            List<string> vanity1 = new();
+            List<string> vanity2 = new();
+            List<string> vanity3 = new();
+            List<string> dye1 = new();
+            List<string> dye2 = new();
+            List<string> dye3 = new();
 
             string s;
             for (int i = 0; i < 59; i++)
@@ -204,7 +234,7 @@ namespace Plugin
             }
             #endregion
 
-            List<string> trash = new List<string>();
+            List<string> trash = new();
             s = GetItemDesc(plr.trashItem);
             if (s != "") trash.Add(s);
 
@@ -302,7 +332,7 @@ namespace Plugin
                 //    op.SendInfoMessage($"死亡统计：{string.Join(", ", f)}");
                 //}
 
-                List<string> enhance = new List<string>();
+                List<string> enhance = new();
                 if (data.extraSlot == 1) enhance.Add("[i:3335]"); // 3335 恶魔之心
                 if (data.unlockedBiomeTorches == 1) enhance.Add("[i:5043]"); // 5043 火把神徽章
                 if (data.ateArtisanBread == 1) enhance.Add("[i:5326]"); // 5326	工匠面包
@@ -318,28 +348,28 @@ namespace Plugin
                 #region 读取格子
                 // accessories
                 // misc
-                List<string> inventory = new List<string>();
-                List<string> assist = new List<string>();
-                List<string> armor = new List<string>();
-                List<string> vanity = new List<string>();
-                List<string> dye = new List<string>();
-                List<string> miscEquips = new List<string>();
-                List<string> miscDyes = new List<string>();
-                List<string> bank = new List<string>();
-                List<string> bank2 = new List<string>();
-                List<string> bank3 = new List<string>();
-                List<string> bank4 = new List<string>();
-                List<string> trash = new List<string>();
+                List<string> inventory = new();
+                List<string> assist = new();
+                List<string> armor = new();
+                List<string> vanity = new();
+                List<string> dye = new();
+                List<string> miscEquips = new();
+                List<string> miscDyes = new();
+                List<string> bank = new();
+                List<string> bank2 = new();
+                List<string> bank3 = new();
+                List<string> bank4 = new();
+                List<string> trash = new();
 
-                List<string> armor1 = new List<string>();
-                List<string> armor2 = new List<string>();
-                List<string> armor3 = new List<string>();
-                List<string> vanity1 = new List<string>();
-                List<string> vanity2 = new List<string>();
-                List<string> vanity3 = new List<string>();
-                List<string> dye1 = new List<string>();
-                List<string> dye2 = new List<string>();
-                List<string> dye3 = new List<string>();
+                List<string> armor1 = new();
+                List<string> armor2 = new();
+                List<string> armor3 = new();
+                List<string> vanity1 = new();
+                List<string> vanity2 = new();
+                List<string> vanity3 = new();
+                List<string> dye1 = new();
+                List<string> dye2 = new();
+                List<string> dye3 = new();
 
                 string s;
                 for (int i = 0; i < NetItem.MaxInventory; i++)
@@ -357,11 +387,11 @@ namespace Plugin
                     {
                         if (s != "") armor.Add(s);
                     }
-                    else if (i >= 69 && i < 78)
+                    else if (i >= 69 && i < 79)
                     {
                         if (s != "") vanity.Add(s);
                     }
-                    else if (i >= 78 && i < 89)
+                    else if (i >= 79 && i < 89)
                     {
                         if (s != "") dye.Add(s);
                     }
@@ -575,18 +605,18 @@ namespace Plugin
 
             // accessories
             // misc
-            List<string> inventory = new List<string>();
-            List<string> assist = new List<string>();
-            List<string> armor = new List<string>();
-            List<string> vanity = new List<string>();
-            List<string> dye = new List<string>();
-            List<string> miscEquips = new List<string>();
-            List<string> miscDyes = new List<string>();
-            List<string> bank = new List<string>();
-            List<string> bank2 = new List<string>();
-            List<string> bank3 = new List<string>();
-            List<string> bank4 = new List<string>();
-            List<string> trash = new List<string>();
+            List<string> inventory = new();
+            List<string> assist = new();
+            List<string> armor = new();
+            List<string> vanity = new();
+            List<string> dye = new();
+            List<string> miscEquips = new();
+            List<string> miscDyes = new();
+            List<string> bank = new();
+            List<string> bank2 = new();
+            List<string> bank3 = new();
+            List<string> bank4 = new();
+            List<string> trash = new();
 
             String s;
             for (int i = 0; i < 260; i++)

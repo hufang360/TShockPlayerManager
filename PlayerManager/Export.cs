@@ -11,143 +11,215 @@ using Terraria.IO;
 using TShockAPI;
 
 
-namespace Plugin
+namespace PlayerManager
 {
+    /// <summary>
+    /// 导出玩家
+    /// </summary>
     public class ExportPlayer
     {
-        private static readonly string save_dir = Path.Combine(TShock.SavePath, "PlayerManager");
-
-        private static string GenTimeDir()
+        /// <summary>
+        /// 导出玩家
+        /// </summary>
+        /// <returns>(successMsg,errMsg)</returns>
+        public static async Task<(string, string)> AsyncExport(string name)
         {
-            DateTime dt = DateTime.Now;
-            string timeStr = string.Format("{0:yyyy-MMdd-HHmm-ss}", dt);
-            string plr_dir = Path.Combine(save_dir, timeStr);
-
-            if (!Directory.Exists(plr_dir))
-                Directory.CreateDirectory(plr_dir);
-
-            return plr_dir;
-        }
-
-        public static async Task Export(TSPlayer op, string name)
-        {
+            string successMsg = "";
+            string errMsg = "";
             await Task.Run(() =>
             {
-                var list = TSPlayer.FindByNameOrID(name);
-                string path = Path.Combine(GenTimeDir(), name + ".plr");
+                var li = Export(name);
+                successMsg = li["success"];
+                errMsg = li["error"];
+            });
+            return (successMsg, errMsg);
+        }
 
-                if (list.Count > 1)
-                {
-                    op.SendMultipleMatchError(list);
+        /// <summary>
+        /// 导出玩家
+        /// </summary>
+        /// <returns>[success, error, path]</returns>
+        public static Dictionary<string, string> Export(string name)
+        {
+            string success = "";
+            string plrFile = Path.Combine(Utils.SaveDir, $"{name}.plr");
+            Utils.BackFile(plrFile);
 
-                }
-                else if (list.Any())
+            var found = Utils.GetPlayer(name, out string error);
+            if (found.online)
+            {
+                if (string.IsNullOrEmpty(error))
                 {
-                    if (ExportOne(list[0].TPlayer, path).Result)
-                        op.SendSuccessMessage($"已导出玩家 {list[0].Name} .（{path}）");
+                    if (ExportOne(found.plr.TPlayer, plrFile).Result)
+                        success = $"已导出在线玩家 {name} .（{plrFile}）";
                     else
-                        op.SendErrorMessage("导出失败.");
-
+                        error = "导出失败.";
                 }
-                else
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(error))
                 {
-                    var offlinelist = TShock.UserAccounts.GetUserAccountsByName(name);
-                    if (offlinelist.Count > 1)
+                    var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), found.ID);
+                    if (data != null)
                     {
-                        op.SendMultipleMatchError(offlinelist);
-
-                    }
-                    else if (offlinelist.Any())
-                    {
-                        name = offlinelist[0].Name;
-                        op.SendInfoMessage($"玩家 {name} 未在线, 将导出离线存档...");
-                        var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), offlinelist[0].ID);
-                        if (data != null)
-                        {
-                            if (data.hideVisuals == null)
-                            {
-                                op.SendErrorMessage($"玩家 {name} 的数据不完整, 无法导出.");
-                                return;
-                            }
-                            if (ExportOne(ModifyData(name, data), path).Result)
-                                op.SendSuccessMessage($"已导出玩家 {name} .（{path}）");
-                            else
-                                op.SendErrorMessage("导出失败.");
-
-                        }
+                        if (data.hideVisuals == null)
+                            error = $"离线玩家 {name} 的数据不完整, 无法导出！";
                         else
                         {
-                            op.SendErrorMessage("未能从数据库中获取到玩家数据.");
+                            if (ExportOne(ModifyData(name, data), plrFile).Result)
+                                success = $"已导出离线玩家 {name} .（{plrFile}）";
+                            else
+                                error = "导出失败.";
                         }
-
                     }
                     else
                     {
-                        op.SendErrorMessage($"未找到名称中包含 {name} 的玩家.");
+                        error = "未能从数据库中获取到玩家数据.";
                     }
                 }
+            }
 
-            });
+            return new() {
+                { "success", success },
+                { "error", error },
+                { "path", Utils.SaveDir }
+            };
         }
 
-        public static async Task ExportAll(TSPlayer op)
+
+        /// <summary>
+        /// 导出全部
+        /// </summary>
+        public static async Task AsyncExportAll(TSPlayer op)
         {
             await Task.Run(() =>
             {
-                int successcount = 0;
-                int faildcount = 0;
-                string plr_dir = GenTimeDir();
+                int successCount = 0;
+                int faildCount = 0;
+                string plrFile;
+                string plrDir = Utils.CreateTimeDir();
 
                 // 在线存档
-                var savedlist = new List<string>();
+                var savedList = new List<string>();
                 TShock.Players.Where(p => p != null && p.SaveServerCharacter()).ForEach(plr =>
                 {
-                    savedlist.Add(plr.Name);
-                    string path1 = Path.Combine(plr_dir, plr.Name + ".plr");
-                    if (ExportOne(plr.TPlayer, path1).Result)
+                    savedList.Add(plr.Name);
+                    plrFile = Path.Combine(plrDir, plr.Name + ".plr");
+                    if (ExportOne(plr.TPlayer, plrFile).Result)
                     {
                         op.SendSuccessMessage($"已导出 {plr.Name} 的在线存档.");
-                        successcount++;
+                        successCount++;
                     }
                     else
                     {
                         op.SendErrorMessage($"导出 {plr.Name} 的在线存档时发生错误.");
-                        faildcount++;
+                        faildCount++;
                     }
                 });
 
                 // 离线存档
-                var allaccount = TShock.UserAccounts.GetUserAccounts();
-                allaccount.Where(acc => acc != null && !savedlist.Contains(acc.Name)).ForEach(acc =>
+                var allAccount = TShock.UserAccounts.GetUserAccounts();
+                allAccount.Where(acc => acc != null && !savedList.Contains(acc.Name)).ForEach(acc =>
                 {
                     var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), acc.ID);
                     if (data != null)
                     {
                         if (data.hideVisuals != null)
                         {
-                            string path2 = Path.Combine(plr_dir, acc.Name + ".plr");
-                            if (ExportOne(ModifyData(acc.Name, data), path2).Result)
+                            plrFile = Path.Combine(plrDir, acc.Name + ".plr");
+                            if (ExportOne(ModifyData(acc.Name, data), plrFile).Result)
                             {
                                 op.SendSuccessMessage($"已导出 {acc.Name} 的存档.");
-                                successcount++;
+                                successCount++;
                             }
                             else
                             {
                                 op.SendErrorMessage($"导出 {acc.Name} 的存档时发生错误.");
-                                faildcount++;
+                                faildCount++;
                             }
                         }
                         else
                         {
-                            op.SendInfoMessage($"玩家 {acc.Name} 的数据不完整, 已跳过.");
+                            op.SendErrorMessage($"玩家 {acc.Name} 的数据不完整, 已跳过.");
                         }
                     }
                 });
-                op.SendInfoMessage($"操作完成. 成功: {successcount}, 失败: {faildcount}. \n导出位置：{plr_dir}");
-
+                op.SendSuccessMessage($"操作完成. 成功: {successCount}, 失败: {faildCount}. \n导出位置：{plrDir}");
             });
         }
 
+
+        /// <summary>
+        /// 导出玩家
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns>[success, error, path]</returns>
+        public static Dictionary<string, List<string>> ExportAll()
+        {
+            List<string> successMsgs = new();
+            List<string> errorMsgs = new();
+            List<string> names = new();
+
+            int successcount = 0;
+            int faildcount = 0;
+            string plr_dir = Utils.CreateTimeDir();
+
+            // 在线存档
+            var savedlist = new List<string>();
+            TShock.Players.Where(p => p != null && p.SaveServerCharacter()).ForEach(plr =>
+            {
+                savedlist.Add(plr.Name);
+                string path1 = Path.Combine(plr_dir, plr.Name + ".plr");
+                if (ExportOne(plr.TPlayer, path1).Result)
+                {
+                    successMsgs.Add($"已导出 {plr.Name} 的在线存档.");
+                    successcount++;
+                    names.Add(plr.Name);
+                }
+                else
+                {
+                    errorMsgs.Add($"导出 {plr.Name} 的在线存档时发生错误.");
+                    faildcount++;
+                }
+            });
+
+            // 离线存档
+            var allaccount = TShock.UserAccounts.GetUserAccounts();
+            allaccount.Where(acc => acc != null && !savedlist.Contains(acc.Name)).ForEach(acc =>
+            {
+                var data = TShock.CharacterDB.GetPlayerData(new TSPlayer(-1), acc.ID);
+                if (data != null)
+                {
+                    if (data.hideVisuals != null)
+                    {
+                        string path2 = Path.Combine(plr_dir, acc.Name + ".plr");
+                        if (ExportOne(ModifyData(acc.Name, data), path2).Result)
+                        {
+                            successMsgs.Add($"已导出 {acc.Name} 的存档.");
+                            successcount++;
+                            names.Add(acc.Name);
+                        }
+                        else
+                        {
+                            errorMsgs.Add($"导出 {acc.Name} 的存档时发生错误.");
+                            faildcount++;
+                        }
+                    }
+                    else
+                    {
+                        errorMsgs.Add($"玩家 {acc.Name} 的数据不完整, 已跳过.");
+                    }
+                }
+            });
+            successMsgs.Add($"操作完成. 成功: {successcount}, 失败: {faildcount}. \n导出位置：{plr_dir}");
+            return new Dictionary<string, List<string>>{
+                { "success", successMsgs },
+                { "error", errorMsgs },
+                { "path", new List<string>(){plr_dir} },
+                { "names", names }
+            };
+        }
 
         private static async Task<bool> ExportOne(Player player, string path)
         {
@@ -161,9 +233,9 @@ namespace Plugin
                     Aes myAes = Aes.Create();
                     using (Stream stream = new FileStream(path, FileMode.Create))
                     {
-                        using (CryptoStream cryptoStream = new CryptoStream(stream, myAes.CreateEncryptor(Player.ENCRYPTION_KEY, Player.ENCRYPTION_KEY), CryptoStreamMode.Write))
+                        using (CryptoStream cryptoStream = new(stream, myAes.CreateEncryptor(Player.ENCRYPTION_KEY, Player.ENCRYPTION_KEY), CryptoStreamMode.Write))
                         {
-                            PlayerFileData playerFileData = new PlayerFileData
+                            PlayerFileData playerFileData = new()
                             {
                                 Metadata = FileMetadata.FromCurrentSettings(FileType.Player),
                                 Player = player,
@@ -171,7 +243,7 @@ namespace Plugin
                                 _path = path
                             };
                             Main.LocalFavoriteData.ClearEntry(playerFileData);
-                            using (BinaryWriter binaryWriter = new BinaryWriter(cryptoStream))
+                            using (BinaryWriter binaryWriter = new(cryptoStream))
                             {
                                 //230 1.4.0.5
                                 //269 1.4.4.0
@@ -388,7 +460,7 @@ namespace Plugin
         /// <returns></returns>
         private static Player ModifyData(string name, PlayerData data)
         {
-            Player player = new Player();
+            Player player = new();
             if (data != null)
             {
                 player.name = name;
@@ -428,9 +500,9 @@ namespace Plugin
 
                 for (int i = 0; i < NetItem.MaxInventory; i++)
                 {
-                    //  0~49 背包   5*10
-                    //  50、51、52、53 钱
-                    //  54、55、56、57 弹药
+                    // 0~49 背包   5*10
+                    // 50、51、52、53 钱
+                    // 54、55、56、57 弹药
                     // 59 ~68  饰品栏
                     // 69 ~78  社交栏
                     // 79 ~88  染料1
