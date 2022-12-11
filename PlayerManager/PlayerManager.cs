@@ -139,7 +139,8 @@ namespace PlayerManager
                 case "look":
                 case "l":
                     args.Parameters.RemoveAt(0);
-                    Look.LookPlayer(args);
+                    var flag = args.Player.RealPlayer;
+                    Look.LookPlayer(args, flag);
                     break;
 
                 // 立即保存SSC

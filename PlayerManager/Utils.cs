@@ -214,6 +214,36 @@ namespace PlayerManager
         }
 
         /// <summary>
+        /// 将字符串换行
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <param name="column">列数，1行显示多个</param>
+        /// <returns></returns>
+        public static List<string> WarpLines(List<string> lines, int column = 10)
+        {
+            List<string> li1 = new();
+            List<string> li2 = new();
+            foreach (var line in lines)
+            {
+                if (li2.Count % column == 0)
+                {
+                    if (li2.Count > 0)
+                    {
+                        li1.Add(string.Join(" ", li2));
+                        li2.Clear();
+                    }
+                }
+                li2.Add(line);
+            }
+            if (li2.Any())
+            {
+                li1.Add(string.Join(" ", li2));
+            }
+            return li1;
+        }
+
+
+        /// <summary>
         /// 高亮显示文本
         /// </summary>
         public static string Highlight(object msg) { return $"[c/96FF0A:{msg}]"; }
