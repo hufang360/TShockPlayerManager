@@ -102,6 +102,7 @@ namespace PlayerManager
             if (Interval > 0 && ((DateTime.Now - lastbackup).TotalMinutes >= Interval))
             {
                 lastbackup = DateTime.Now;
+                Save();
                 await DoAutoBack();
                 await DeleteOld();
             }
