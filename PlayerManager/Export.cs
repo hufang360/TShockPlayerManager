@@ -475,7 +475,14 @@ namespace PlayerManager
                 player.statManaMax = data.maxMana;
                 player.extraAccessory = data.extraSlot == 1;
 
-                player.difficulty = (byte)Main.GameModeInfo.Id;
+                // 人物模式：0=经典，1=中核，2=硬核，3=旅行
+                // 地图模式：0=经典，1=专家，2=大师，3=旅行
+                if (Main.GameMode == 3)
+                    player.difficulty = 3; // 旅行模式
+                else
+                    player.difficulty = 1;  // 软核模式
+                if (TShock.Config.Settings.MediumcoreOnly) player.difficulty = 1;
+                if (TShock.Config.Settings.HardcoreOnly) player.difficulty = 2;
 
                 // 火把神
                 player.unlockedBiomeTorches = data.unlockedBiomeTorches == 1;
