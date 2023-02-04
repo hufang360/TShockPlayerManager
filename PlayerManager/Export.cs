@@ -431,7 +431,11 @@ namespace PlayerManager
                     }
                     return true;
                 }
-                catch (Exception ex) { File.Delete(path); TShock.Log.ConsoleError(ex.Message); }
+                catch (Exception ex)
+                {
+                    //File.Delete(path);
+                    TShock.Log.ConsoleError(ex.Message);
+                }
                 return false;
             });
         }
