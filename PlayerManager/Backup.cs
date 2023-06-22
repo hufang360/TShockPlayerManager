@@ -18,6 +18,9 @@ namespace PlayerManager
     /// </summary>
     public class Backup
     {
+        // sqlite文件路径
+        static string sqliteFilePath = Path.Combine(TShock.SavePath, TShock.Config.Settings.SqliteDBPath.ToLower());
+
         #region 自动备份
         public static TerrariaPlugin RegObj;
         static bool hasUpdate = false;
@@ -118,7 +121,7 @@ namespace PlayerManager
                 Utils.CreateBackupsDir();
                 string file = $"{Utils.GetTimeStr()}.sqlite";
                 string sqlFile = Path.Combine(Utils.BackupsDir, file);
-                File.Copy("tshock/tshock.sqlite", sqlFile, true);
+                File.Copy(sqliteFilePath, sqlFile, true);
                 if (Utils.Config.ShowSaveMessages)
                     Utils.Log($"SSC已备份");
             });
@@ -329,7 +332,7 @@ namespace PlayerManager
                 string file = $"{num}_{rawFileName}";
                 string rawFile = Path.Combine(Utils.BackupsDir, rawFileName);
                 string sqlFile = Path.Combine(Utils.SaveDir, $"{num}_{rawFileName}");
-                File.Copy("tshock/tshock.sqlite", sqlFile, true);
+                File.Copy(sqliteFilePath, sqlFile, true);
                 op.SendSuccessMessage($"已将 {rawFileName} 转成 第{num}个备份点！({file})");
             });
         }
@@ -351,7 +354,7 @@ namespace PlayerManager
                 }
                 string file = $"{num}_{note}.sqlite";
                 string sqlFile = Path.Combine(Utils.SaveDir, file);
-                File.Copy("tshock/tshock.sqlite", sqlFile, true);
+                File.Copy(sqliteFilePath, sqlFile, true);
                 op.SendSuccessMessage($"第{num}个备份点已创建！({file})");
             });
         }
