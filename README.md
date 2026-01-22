@@ -3,7 +3,7 @@
 导出/备份/恢复玩家存档，查看玩家背包。
 
 
-下载地址：[PlayerManager-v1.3.4.dll](https://github.com/hufang360/TShockPlayerManager/releases/download/v1.3.4/PlayerManager-v1.3.4.dll)
+下载地址：[PlayerManager-v1.3.4-ts524.dll](https://github.com/hufang360/TShockPlayerManager/releases/download/v1.3.4/PlayerManager-v1.3.4-ts524.dll)
 
 
 # 部分指令
