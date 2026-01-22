@@ -458,8 +458,10 @@ namespace PlayerManager
                 player.TPlayer.statManaMax = maxMana;
                 player.TPlayer.SpawnX = spawnX;
                 player.TPlayer.SpawnY = spawnY;
-                player.sX = spawnX;
-                player.sY = spawnY;
+                player.initialServerSpawnX = spawnX;
+                player.initialServerSpawnY = spawnY;
+                player.initialClientSpawnX = spawnX;
+                player.initialClientSpawnY = spawnY;
                 player.TPlayer.anglerQuestsFinished = questsCompleted;
                 player.TPlayer.UsingBiomeTorches = usingBiomeTorches == 1;
                 player.TPlayer.happyFunTorchTime = happyFunTorchTime == 1;
@@ -523,7 +525,7 @@ namespace PlayerManager
             }
 
             // 仅buff
-            if( RecoverType==3 )
+            if (RecoverType == 3)
             {
                 ToPlayerBuff(player);
             }
