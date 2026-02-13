@@ -313,49 +313,49 @@ namespace PlayerManager
                                 binaryWriter.Write(player.shoeColor.B);
                                 for (int k = 0; k < player.armor.Length; k++)
                                 {
-                                    binaryWriter.Write(player.armor[k].netID);
+                                    binaryWriter.Write(player.armor[k].type);
                                     binaryWriter.Write(player.armor[k].prefix);
                                 }
                                 for (int l = 0; l < player.dye.Length; l++)
                                 {
-                                    binaryWriter.Write(player.dye[l].netID);
+                                    binaryWriter.Write(player.dye[l].type);
                                     binaryWriter.Write(player.dye[l].prefix);
                                 }
                                 for (int m = 0; m < 58; m++)
                                 {
-                                    binaryWriter.Write(player.inventory[m].netID);
+                                    binaryWriter.Write(player.inventory[m].type);
                                     binaryWriter.Write(player.inventory[m].stack);
                                     binaryWriter.Write(player.inventory[m].prefix);
                                     binaryWriter.Write(player.inventory[m].favorited);
                                 }
                                 for (int n = 0; n < player.miscEquips.Length; n++)
                                 {
-                                    binaryWriter.Write(player.miscEquips[n].netID);
+                                    binaryWriter.Write(player.miscEquips[n].type);
                                     binaryWriter.Write(player.miscEquips[n].prefix);
-                                    binaryWriter.Write(player.miscDyes[n].netID);
+                                    binaryWriter.Write(player.miscDyes[n].type);
                                     binaryWriter.Write(player.miscDyes[n].prefix);
                                 }
                                 for (int num = 0; num < 40; num++)
                                 {
-                                    binaryWriter.Write(player.bank.item[num].netID);
+                                    binaryWriter.Write(player.bank.item[num].type);
                                     binaryWriter.Write(player.bank.item[num].stack);
                                     binaryWriter.Write(player.bank.item[num].prefix);
                                 }
                                 for (int num2 = 0; num2 < 40; num2++)
                                 {
-                                    binaryWriter.Write(player.bank2.item[num2].netID);
+                                    binaryWriter.Write(player.bank2.item[num2].type);
                                     binaryWriter.Write(player.bank2.item[num2].stack);
                                     binaryWriter.Write(player.bank2.item[num2].prefix);
                                 }
                                 for (int num3 = 0; num3 < 40; num3++)
                                 {
-                                    binaryWriter.Write(player.bank3.item[num3].netID);
+                                    binaryWriter.Write(player.bank3.item[num3].type);
                                     binaryWriter.Write(player.bank3.item[num3].stack);
                                     binaryWriter.Write(player.bank3.item[num3].prefix);
                                 }
                                 for (int num4 = 0; num4 < 40; num4++)
                                 {
-                                    binaryWriter.Write(player.bank4.item[num4].netID);
+                                    binaryWriter.Write(player.bank4.item[num4].type);
                                     binaryWriter.Write(player.bank4.item[num4].stack);
                                     binaryWriter.Write(player.bank4.item[num4].prefix);
                                     binaryWriter.Write(player.bank4.item[num4].favorited);
@@ -479,12 +479,12 @@ namespace PlayerManager
                 player.statManaMax = data.maxMana;
                 player.extraAccessory = data.extraSlot == 1;
 
-                // 人物模式：0=经典，1=中核，2=硬核，3=旅行
+                // 人物模式：0=软核，1=中核，2=硬核，3=旅行
                 // 地图模式：0=经典，1=专家，2=大师，3=旅行
                 if (Main.GameMode == 3)
                     player.difficulty = 3; // 旅行模式
                 else
-                    player.difficulty = 1;  // 软核模式
+                    player.difficulty = 0;  // 软核模式
                 if (TShock.Config.Settings.MediumcoreOnly) player.difficulty = 1;
                 if (TShock.Config.Settings.HardcoreOnly) player.difficulty = 2;
 

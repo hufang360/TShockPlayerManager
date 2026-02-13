@@ -524,10 +524,10 @@ namespace PlayerManager
         /// </summary>
         static string GetItemDesc(Item item, bool isFlag = true)
         {
-            if (item.netID == 0)
+            if (item.type == 0)
                 return "";
 
-            return GetItemDesc(item.netID, item.Name, item.stack, item.prefix, isFlag);
+            return GetItemDesc(item.type, item.Name, item.stack, item.prefix, isFlag);
         }
 
 
